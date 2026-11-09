@@ -14,6 +14,8 @@ export type IconName =
   | 'target'
   | 'sliders'
   | 'tree'
+  | 'link'
+  | 'info'
   | 'translate';
 
 /**
@@ -108,6 +110,15 @@ export type IconName =
           <path d="M6 7.2v3.3a3 3 0 0 0 3 3h.8" />
           <path d="M18 7.2v3.3a3 3 0 0 1-3 3h-.8" />
           <line x1="12" y1="13.5" x2="12" y2="16.8" />
+        }
+        @case ('link') {
+          <path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1.5 1.5" />
+          <path d="M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1.5-1.5" />
+        }
+        @case ('info') {
+          <circle cx="12" cy="12" r="8.5" />
+          <line x1="12" y1="10.8" x2="12" y2="16.5" />
+          <circle cx="12" cy="7.8" r="0.6" fill="currentColor" stroke="none" />
         }
         @case ('translate') {
           <path d="M4 6h9" />

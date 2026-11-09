@@ -2,7 +2,7 @@
   display: block;
 }
 
-/* Banner full-bleed no topo (como na landing) ----------------------------- */
+/* Banner: logo em largura contida e nítida (não estica a imagem). */
 .banner {
   margin: calc(-1 * var(--space-8)) calc(-1 * var(--shell-pad)) var(--space-10);
   background: var(--teal);
@@ -10,7 +10,7 @@
 
 .banner img {
   display: block;
-  width: 100%;
+  width: min(640px, 100%);
   height: auto;
   margin: 0 auto;
 }

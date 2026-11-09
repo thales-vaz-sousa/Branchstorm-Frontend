@@ -116,10 +116,25 @@ export class NodeDetailPanelComponent {
     const status = this.node()?.status;
     return status !== undefined && status !== 'Selected' && status !== 'Final';
   });
-  protected readonly canFinal = computed(() => this.node()?.status === 'Selected');
+  protected readonly canFinal = computed(
+    () => this.node()?.status === 'Selected' && this.node()?.type !== 'Problem',
+  );
   protected readonly childLabel = computed(() =>
     this.i18n.t(
       this.node()?.type === 'Problem' ? 'panel.createChildSolution' : 'panel.createChildBranch',
+    ),
+  );
+
+  protected readonly childrenLabel = computed(() =>
+    this.i18n.t(
+      this.node()?.type === 'Problem' ? 'panel.childrenSolutions' : 'panel.childrenVersions',
+      { count: this.children().length },
+    ),
+  );
+
+  protected readonly childrenEmptyLabel = computed(() =>
+    this.i18n.t(
+      this.node()?.type === 'Problem' ? 'panel.noSolutions' : 'panel.noVersions',
     ),
   );
 
@@ -201,8 +216,12 @@ export class NodeDetailPanelComponent {
     return hypothesis.result ?? 'NotTested';
   }
 
-  protected initials(name: string): string {
-    return name.slice(0, 1).toUpperCase();
+  protected copyLink(code: string): void {
+    const url = `${location.origin}${location.pathname}#/ideias/${code}`;
+    void navigator.clipboard?.writeText(url).then(
+      () => this.notifications.success(this.i18n.t('panel.linkCopied')),
+      () => this.notifications.info(url),
+    );
   }
 
   protected async selectNode(): Promise<void> {

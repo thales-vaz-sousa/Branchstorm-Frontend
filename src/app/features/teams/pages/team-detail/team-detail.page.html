@@ -12,7 +12,6 @@
   </app-empty-state>
 } @else if (team(); as currentTeam) {
   <app-page-header
-    [eyebrow]="'detail.eyebrow' | translate"
     [title]="currentTeam.name"
     [description]="'teams.members' | translate: { count: currentTeam.members.length }"
   >
@@ -69,14 +68,19 @@
               <a class="problem" [routerLink]="['/ideias', problem.code]">
                 <div class="problem__head">
                   <app-status-badge [status]="problem.status" />
-                  <app-validation-badge [validation]="problem.validation" />
+                  @if (problem.validation !== 'NotTested') {
+                    <app-validation-badge [validation]="problem.validation" />
+                  }
                 </div>
                 <h3 class="problem__title">{{ problem.title }}</h3>
                 @if (problem.description) {
                   <p class="problem__description">{{ problem.description }}</p>
                 }
                 <div class="problem__foot">
-                  <span class="problem__date">{{ problem.creationDate | relativeDate }}</span>
+                  <span class="problem__date">
+                    {{ memberName(problem.autorCode) }} · {{ problem.creationDate | dateTime: 'date' }} ·
+                    {{ countsLabel(problem.code) }}
+                  </span>
                   <span class="problem__arrow" aria-hidden="true">
                     <app-icon name="arrow" [size]="16" />
                   </span>
@@ -89,13 +93,9 @@
     </section>
 
     <aside class="detail__side" aria-labelledby="members-title">
-      <app-card padding="md">
-        <div class="section-head section-head--compact">
-          <h2 id="members-title" class="section-head__title">{{ 'detail.members' | translate }}</h2>
-          <span class="section-head__count">{{ members().length }}</span>
-        </div>
-
-        <form class="team-fields" (ngSubmit)="save()">
+      <section class="team-name-block" aria-labelledby="team-name-title">
+        <h2 id="team-name-title" class="section-head__title">{{ 'detail.teamName' | translate }}</h2>
+        <form (ngSubmit)="save()">
           <app-field
             controlId="team-name"
             [label]="'detail.teamName' | translate"
@@ -115,17 +115,22 @@
             />
           </app-field>
         </form>
+      </section>
+
+      <app-card padding="md">
+        <div class="section-head section-head--compact">
+          <h2 id="members-title" class="section-head__title">{{ 'detail.members' | translate }}</h2>
+          <span class="section-head__count">{{ members().length }}</span>
+        </div>
 
         <ul class="members">
           @for (member of members(); track member.userCode) {
             <li class="member">
-              <span class="member__avatar">{{ initials(memberName(member.userCode)) }}</span>
               <div class="member__copy">
                 <strong>{{ memberName(member.userCode) }}</strong>
                 <span>{{ memberEmail(member.userCode) }}</span>
               </div>
               <div class="member__role">
-                <app-role-badge [role]="roleName(member.role)" />
                 <select
                   class="bs-select member__select"
                   [value]="roleName(member.role)"
@@ -153,6 +158,8 @@
             </li>
           }
         </ul>
+
+        <p class="role-hint">{{ 'detail.rolesHint' | translate }}</p>
 
         @if (availableUsers().length > 0) {
           <div class="add-member">

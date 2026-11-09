@@ -53,7 +53,7 @@ export class AppShellComponent {
   protected readonly i18n = inject(I18nService);
   protected readonly loading = inject(LoadingStore);
   protected readonly environment = environment;
-  protected readonly demoMode = anyMockEnabled();
+  protected readonly demoMode = anyMockEnabled() && !environment.production;
   protected readonly isTreeRoute = signal(this.router.url.includes('/ideias/'));
   private readonly titleKey = signal<string | null>(null);
 

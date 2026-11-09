@@ -20,6 +20,25 @@
   border-bottom: 1px solid var(--line);
 }
 
+/* Faixa fina de demonstração, de ponta a ponta (não parece botão/campo). */
+.shell__demo-strip {
+  margin: 0;
+  padding: 3px var(--space-4);
+  background: var(--soft);
+  border-bottom: 1px solid var(--line);
+  color: var(--tink);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+.shell__footer-link {
+  color: var(--muted);
+}
+
+.shell__footer-link:hover {
+  color: var(--ink);
+}
+
 .shell__bar {
   display: flex;
   align-items: center;

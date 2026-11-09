@@ -1,5 +1,4 @@
 <app-page-header
-  [eyebrow]="'teams.eyebrow' | translate"
   [title]="'teams.title' | translate"
   [description]="'teams.desc' | translate"
 >
@@ -40,7 +39,6 @@
           <app-card padding="md" [interactive]="true">
             <div class="team-card">
               <header class="team-card__head">
-                <span class="team-card__avatar">{{ team.name.slice(0, 1).toUpperCase() }}</span>
                 <div class="team-card__title">
                   <strong>{{ team.name }}</strong>
                   <span class="team-card__meta">{{ 'teams.members' | translate: { count: team.members.length } }}</span>

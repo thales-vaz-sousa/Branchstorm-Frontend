@@ -2,13 +2,21 @@
   <aside class="panel" [attr.aria-label]="'panel.label' | translate">
     <header class="panel__head">
       <div class="panel__top">
-        <span class="panel__avatar" aria-hidden="true">
-          {{ initials(authorName(current.autorCode)) }}
-        </span>
         <div class="panel__ident">
           <span class="panel__type">{{ typeLabel(current) }}</span>
-          <span class="panel__code">{{ current.code }}</span>
         </div>
+        <button
+          appButton
+          variant="text"
+          size="sm"
+          type="button"
+          class="panel__copy"
+          [attr.aria-label]="'panel.copyLink' | translate"
+          [attr.title]="'panel.copyLink' | translate"
+          (click)="copyLink(current.code)">
+          <app-icon name="link" [size]="14" />
+          {{ 'panel.copyLink' | translate }}
+        </button>
         <button
           appButton
           variant="text"
@@ -25,7 +33,9 @@
 
       <div class="panel__badges">
         <app-status-badge [status]="current.status" />
-        <app-validation-badge [validation]="current.validation" />
+        @if (current.validation !== 'NotTested') {
+          <app-validation-badge [validation]="current.validation" />
+        }
       </div>
 
       <div class="panel__actions">
@@ -38,25 +48,32 @@
           <app-icon name="plus" [size]="15" />
           {{ childLabel() }}
         </button>
-        <button
-          appButton
-          variant="outline"
-          size="sm"
-          type="button"
-          [disabled]="!canSelect() || saving()"
-          (click)="selectNode()">
-          {{ 'panel.select' | translate }}
-        </button>
-        <button
-          appButton
-          variant="outline"
-          size="sm"
-          type="button"
-          [disabled]="!canFinal() || saving()"
-          (click)="markFinal()">
-          {{ 'panel.markFinal' | translate }}
-        </button>
+        @if (canSelect()) {
+          <button
+            appButton
+            variant="outline"
+            size="sm"
+            type="button"
+            [disabled]="saving()"
+            (click)="selectNode()">
+            {{ 'panel.select' | translate }}
+          </button>
+        }
+        @if (canFinal()) {
+          <button
+            appButton
+            variant="outline"
+            size="sm"
+            type="button"
+            [disabled]="saving()"
+            (click)="markFinal()">
+            {{ 'panel.markFinal' | translate }}
+          </button>
+        }
       </div>
+      @if (!canFinal() && current.type !== 'Problem' && current.status === 'Open') {
+        <p class="panel__hint">{{ 'panel.finalHint' | translate }}</p>
+      }
     </header>
 
     <app-tabs
@@ -97,12 +114,6 @@
                 <dt>{{ 'panel.createdAt' | translate }}</dt>
                 <dd>{{ current.creationDate | dateTime }}</dd>
               </div>
-              <div>
-                <dt>{{ 'panel.code' | translate }}</dt>
-                <dd>
-                  <code>{{ current.code }}</code>
-                </dd>
-              </div>
             </dl>
 
             <section class="block">
@@ -122,10 +133,10 @@
             </section>
 
             <section class="block">
-              <h3>{{ 'panel.branches' | translate: { count: children().length } }}</h3>
+              <h3>{{ childrenLabel() }}</h3>
 
               @if (children().length === 0) {
-                <p class="muted small">{{ 'panel.noBranches' | translate }}</p>
+                <p class="muted small">{{ childrenEmptyLabel() }}</p>
               } @else {
                 <ul class="child-list">
                   @for (child of children(); track child.code) {
@@ -295,9 +306,6 @@
                 @for (feedback of feedbackState().items; track feedback.code) {
                   <li class="feedback">
                     <header>
-                      <span class="feedback__avatar">
-                        {{ initials(authorName(feedback.autorCode)) }}
-                      </span>
                       <div>
                         <strong>{{ authorName(feedback.autorCode) }}</strong>
                         <span class="subtle small">{{ feedback.creationDate | relativeDate }}</span>

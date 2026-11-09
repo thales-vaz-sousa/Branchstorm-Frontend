@@ -15,9 +15,6 @@
             ariaCurrentWhenActive="page">
             {{ 'nav.teams' | translate }}
           </a>
-          <a class="shell__link" [href]="environment.docsUrl" target="_blank" rel="noopener">
-            {{ 'nav.docs' | translate }}
-          </a>
           <a
             class="shell__link"
             routerLink="/sobre"
@@ -28,11 +25,6 @@
         </nav>
 
         <div class="shell__actions">
-          @if (demoMode) {
-            <app-banner tone="demo" class="shell__demo-bar">
-              {{ 'shell.demo' | translate }}
-            </app-banner>
-          }
           <button
             class="shell__user"
             type="button"
@@ -70,6 +62,10 @@
         </div>
       </div>
 
+      @if (demoMode) {
+        <p class="shell__demo-strip" role="status">{{ 'shell.demo' | translate }}</p>
+      }
+
       @if (loading.isLoading()) {
         <div
           class="shell__progress"
@@ -101,6 +97,10 @@
           width="20"
           height="20" />
         <span>{{ 'footer.brand' | translate }}</span>
+        <span class="shell__footer-sep" aria-hidden="true">·</span>
+        <a class="shell__footer-link" [href]="environment.docsUrl" target="_blank" rel="noopener">
+          {{ 'nav.docs' | translate }}
+        </a>
       </div>
     </footer>
   }

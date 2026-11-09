@@ -5,8 +5,10 @@
       type="button"
       (click)="showDetails.set(!showDetails())"
       [attr.aria-expanded]="showDetails()">
-      {{ 'canvas.details' | translate }}
-      <app-icon name="chevron" [size]="14" [rotate]="showDetails() ? 270 : 90" />
+      <app-icon name="info" [size]="16" class="canvas__details-info" />
+      <span class="canvas__details-label">{{ 'canvas.details' | translate }}</span>
+      <span class="canvas__details-short">{{ 'canvas.detailsShort' | translate }}</span>
+      <app-icon name="chevron" [size]="14" [rotate]="showDetails() ? 270 : 90" class="canvas__details-chevron" />
     </button>
 
     @if (showDetails()) {
@@ -36,38 +38,21 @@
           </div>
         }
 
-        @if (stats(); as s) {
-          <dl class="canvas__stats">
-            <div>
-              <dt>{{ 'canvas.stats.total' | translate }}</dt>
-              <dd>{{ s.total }}</dd>
-            </div>
-            <div>
-              <dt>{{ 'canvas.stats.open' | translate }}</dt>
-              <dd>{{ s.open }}</dd>
-            </div>
-            <div>
-              <dt>{{ 'canvas.stats.selected' | translate }}</dt>
-              <dd>{{ s.selected }}</dd>
-            </div>
-            <div>
-              <dt>{{ 'canvas.stats.discarded' | translate }}</dt>
-              <dd>{{ s.discarded }}</dd>
-            </div>
-            <div>
-              <dt>{{ 'canvas.stats.final' | translate }}</dt>
-              <dd>{{ s.final }}</dd>
-            </div>
-          </dl>
+        @if (contributors().length > 0) {
+          <div class="canvas__contributors">
+            <span class="canvas__eyebrow">{{ 'canvas.contributors' | translate }}</span>
+            <ul class="canvas__contributors-list">
+              @for (person of contributors(); track person.code) {
+                <li>
+                  <span class="canvas__contributor-name">{{ person.name }}</span>
+                  <span class="canvas__contributor-count">
+                    {{ 'canvas.itemsCount' | translate: { count: person.count } }}
+                  </span>
+                </li>
+              }
+            </ul>
+          </div>
         }
-
-        <ul class="canvas__legend" [attr.aria-label]="'legend.selected' | translate">
-          <li><span class="dot dot--teal"></span>{{ 'legend.selected' | translate }}</li>
-          <li><span class="dot dot--soft"></span>{{ 'legend.final' | translate }}</li>
-          <li><span class="dot dot--line"></span>{{ 'legend.open' | translate }}</li>
-          <li><span class="dot dot--muted"></span>{{ 'legend.discarded' | translate }}</li>
-          <li><span class="dot dot--empty"></span>{{ 'legend.empty' | translate }}</li>
-        </ul>
       </div>
     }
   </div>
@@ -110,6 +95,7 @@
         type="button"
         class="canvas__icon-btn"
         [attr.aria-label]="'canvas.settings' | translate"
+        [attr.title]="'canvas.settings' | translate"
         [attr.aria-expanded]="showSettings()"
         (click)="toggleSettings()">
         <app-icon name="sliders" [size]="16" />
@@ -120,28 +106,9 @@
         size="sm"
         type="button"
         class="canvas__icon-btn"
-        [attr.aria-label]="'canvas.home' | translate"
-        (click)="goHome()">
-        <app-icon name="home" [size]="16" />
-      </button>
-      <button
-        appButton
-        variant="text"
-        size="sm"
-        type="button"
-        class="canvas__icon-btn"
-        [attr.aria-label]="'canvas.fullscreen' | translate"
-        (click)="toggleFullscreen()">
-        <app-icon name="fullscreen" [size]="16" />
-      </button>
-      <button
-        appButton
-        variant="text"
-        size="sm"
-        type="button"
-        class="canvas__icon-btn"
-        [attr.aria-label]="'canvas.centerSelected' | translate"
-        (click)="goTarget()">
+        [attr.aria-label]="'canvas.fit' | translate"
+        [attr.title]="'canvas.fit' | translate"
+        (click)="center()">
         <app-icon name="target" [size]="16" />
       </button>
       <span class="canvas__sep" aria-hidden="true"></span>
@@ -150,7 +117,9 @@
         variant="text"
         size="sm"
         type="button"
+        class="canvas__icon-btn"
         [attr.aria-label]="'canvas.zoomOut' | translate"
+        [attr.title]="'canvas.zoomOut' | translate"
         (click)="zoomBy(0.82)">
         −
       </button>
@@ -160,7 +129,9 @@
         variant="text"
         size="sm"
         type="button"
+        class="canvas__icon-btn"
         [attr.aria-label]="'canvas.zoomIn' | translate"
+        [attr.title]="'canvas.zoomIn' | translate"
         (click)="zoomBy(1.22)">
         +
       </button>
@@ -198,6 +169,10 @@
           <span class="canvas__sep" aria-hidden="true"></span>
           <button appButton variant="text" size="sm" type="button" (click)="center()">
             {{ 'canvas.center' | translate }}
+          </button>
+          <span class="canvas__sep" aria-hidden="true"></span>
+          <button appButton variant="text" size="sm" type="button" (click)="toggleFullscreen()">
+            {{ 'canvas.fullscreen' | translate }}
           </button>
         </div>
       </div>
@@ -282,9 +257,6 @@
         @for (link of layout().links; track link.key) {
           <path class="link" [class.link--active]="link.active" [attr.d]="link.path" />
         }
-        @if (layout().ghostPath) {
-          <path class="link link--ghost" [attr.d]="layout().ghostPath" />
-        }
       </svg>
 
       @for (item of layout().nodes; track item.node.code) {
@@ -321,8 +293,9 @@
           <div class="tree-node__foot">
             <app-status-badge [status]="item.node.status" />
             @if (item.node.validation !== 'NotTested') {
-              <span class="tree-node__validation" [title]="validationLabel(item.node)">
-                <app-icon name="flask" [size]="13" />
+              <span class="tree-node__validation-chip" [title]="validationLabel(item.node)">
+                <app-icon name="flask" [size]="12" />
+                {{ validationLabel(item.node) }}
               </span>
             }
           </div>
@@ -349,20 +322,35 @@
         </div>
       }
 
-      @if (layout().ghost; as ghost) {
-        <button
-          type="button"
-          class="tree-node tree-node--ghost"
-          [class.tree-node--portrait]="isPortrait()"
-          [style.left.px]="ghost.x"
-          [style.top.px]="ghost.y"
-          [style.width.px]="nodeW()"
-          [style.height.px]="nodeH()"
-          [attr.aria-label]="ghost.label + ' abaixo de ' + ghost.fatherCode"
-          (click)="requestChild($event, ghost.fatherCode)">
-          <span class="tree-node__ghost-label">{{ ghost.label }}</span>
-        </button>
-      }
+    </div>
+
+    @if (selectedCode()) {
+      <button
+        appButton
+        variant="filled"
+        size="sm"
+        type="button"
+        class="canvas__add"
+        [attr.aria-label]="addLabel()"
+        (click)="requestChild($event, selectedCode()!)">
+        <app-icon name="plus" [size]="15" />
+        {{ addLabel() }}
+      </button>
+    }
+
+    <div class="canvas__mini-legend" aria-hidden="true">
+      <span class="canvas__mini-group">
+        <strong>{{ 'legend.statusGroup' | translate }}</strong>
+        <span class="canvas__mini-item"><span class="dot dot--line"></span>{{ 'status.open' | translate }}</span>
+        <span class="canvas__mini-item"><span class="dot dot--teal"></span>{{ 'status.selected' | translate }}</span>
+        <span class="canvas__mini-item"><span class="dot dot--teal dot--final"></span>{{ 'status.final' | translate }}</span>
+        <span class="canvas__mini-item"><span class="dot dot--muted"></span>{{ 'status.discarded' | translate }}</span>
+      </span>
+      <span class="canvas__mini-group">
+        <strong>{{ 'legend.validationGroup' | translate }}</strong>
+        <span class="canvas__mini-item"><span class="dot dot--soft"></span>{{ 'validation.validated' | translate }}</span>
+        <span class="canvas__mini-item"><span class="dot dot--muted"></span>{{ 'validation.refuted' | translate }}</span>
+      </span>
     </div>
   }
 </div>

@@ -63,6 +63,20 @@
   flex: 1;
 }
 
+.panel__copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.panel__hint {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
 .panel__code {
   overflow: hidden;
   font-size: 11px;

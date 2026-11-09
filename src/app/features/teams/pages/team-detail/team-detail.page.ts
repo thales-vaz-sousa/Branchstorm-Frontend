@@ -17,13 +17,12 @@ import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.componen
 import { FieldComponent } from '@shared/ui/field/field.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { RoleBadgeComponent } from '@shared/ui/role-badge/role-badge.component';
 import { BrandLoaderComponent } from '@shared/ui/brand-loader/brand-loader.component';
 import { SpinnerComponent } from '@shared/ui/spinner/spinner.component';
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
 import { ValidationBadgeComponent } from '@shared/ui/validation-badge/validation-badge.component';
 import { DialogService } from '@shared/ui/dialog/dialog.service';
-import { RelativeDatePipe } from '@shared/pipes/relative-date.pipe';
+import { DateTimePipe } from '@shared/pipes/date-time.pipe';
 import { NotificationService } from '@core/ui/notification.service';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
@@ -37,6 +36,7 @@ import {
   type TeamMemberRoleName,
 } from '@shared/models/team.model';
 import type { CreateLinkRequest } from '@shared/models/link.model';
+import { IdeaApi } from '@features/ideas/data-access/idea-api.service';
 import {
   TEAM_ROLE_NAMES,
   roleDescription,
@@ -56,12 +56,11 @@ import {
     FieldComponent,
     IconComponent,
     PageHeaderComponent,
-    RoleBadgeComponent,
     BrandLoaderComponent,
     SpinnerComponent,
     StatusBadgeComponent,
     ValidationBadgeComponent,
-    RelativeDatePipe,
+    DateTimePipe,
     TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -75,6 +74,7 @@ export class TeamDetailPage {
   private readonly usersStore = inject(UserDirectoryStore);
   private readonly ideasStore = inject(IdeaListStore);
   private readonly dialogs = inject(DialogService);
+  private readonly ideaApi = inject(IdeaApi);
   private readonly i18n = inject(I18nService);
   private readonly notifications = inject(NotificationService);
 
@@ -89,6 +89,9 @@ export class TeamDetailPage {
 
   protected readonly code = signal('');
   protected readonly members = signal<readonly TeamMember[]>([]);
+  protected readonly problemCounts = signal<ReadonlyMap<string, { solutions: number; finals: number }>>(
+    new Map(),
+  );
   protected readonly saving = signal(false);
   protected readonly creatingProblem = signal(false);
   protected readonly selectedUserCode = signal<string | null>(null);
@@ -159,12 +162,53 @@ export class TeamDetailPage {
       }
 
       this.members.set(team.members.map(({ userCode, role }) => ({ userCode, role })));
-      this.nameControl.setValue(team.name, { emitEvent: false });
+      this.nameControl.setValue(team.name);
     });
   }
 
   protected async load(code: string): Promise<void> {
     await Promise.all([this.teamsStore.load(code), this.ideasStore.load(code)]);
+    await this.loadProblemCounts();
+  }
+
+  /** Contagem de soluções e finais por problema (para o cartão, sem código interno). */
+  private async loadProblemCounts(): Promise<void> {
+    const roots = this.problems();
+
+    if (roots.length === 0) {
+      return;
+    }
+
+    const entries = await Promise.all(
+      roots.map(async (root) => {
+        try {
+          const tree = await firstValueFrom(this.ideaApi.findTree(root.code));
+          return [
+            root.code,
+            {
+              solutions: tree.filter((item) => item.type === 'Solution').length,
+              finals: tree.filter((item) => item.status === 'Final').length,
+            },
+          ] as const;
+        } catch {
+          return [root.code, { solutions: 0, finals: 0 }] as const;
+        }
+      }),
+    );
+    this.problemCounts.set(new Map(entries));
+  }
+
+  protected countsLabel(code: string): string {
+    const counts = this.problemCounts().get(code);
+
+    if (!counts) {
+      return '';
+    }
+
+    return this.i18n.t('detail.problemCounts', {
+      solutions: counts.solutions,
+      finals: counts.finals,
+    });
   }
 
   protected reloadProblems(): void {
@@ -188,21 +232,16 @@ export class TeamDetailPage {
     }
   }
 
-  protected memberName(code: string): string {
+  protected memberName(code: string | null): string {
+    if (!code) {
+      return this.i18n.t('canvas.authorFallback');
+    }
+
     return this.usersByCode().get(code)?.name ?? this.i18n.t('canvas.memberFallback');
   }
 
   protected memberEmail(code: string): string {
     return this.usersByCode().get(code)?.email ?? '';
-  }
-
-  protected initials(name: string): string {
-    return name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() ?? '')
-      .join('');
   }
 
   protected onUserSelected(code: string): void {
@@ -229,9 +268,21 @@ export class TeamDetailPage {
     this.selectedUserCode.set(null);
   }
 
-  protected removeMember(userCode: string): void {
+  protected async removeMember(userCode: string): Promise<void> {
     if (this.members().length <= 1) {
       this.notifications.error(this.i18n.t('detail.needOneMember'));
+      return;
+    }
+
+    const ok = await this.dialogs.confirm({
+      title: this.i18n.t('detail.removeMemberTitle'),
+      message: this.i18n.t('detail.removeMemberMessage', {
+        name: this.memberName(userCode),
+      }),
+      confirmLabel: this.i18n.t('detail.removeMemberOk'),
+    });
+
+    if (!ok) {
       return;
     }
 
@@ -252,7 +303,7 @@ export class TeamDetailPage {
     }
 
     this.members.set(team.members.map(({ userCode, role }) => ({ userCode, role })));
-    this.nameControl.setValue(team.name, { emitEvent: false });
+    this.nameControl.setValue(team.name);
   }
 
   protected async save(): Promise<void> {

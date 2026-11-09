@@ -60,20 +60,9 @@ interface PositionedLink {
   readonly active: boolean;
 }
 
-interface GhostSlot {
-  readonly fatherCode: string;
-  readonly x: number;
-  readonly y: number;
-  readonly label: string;
-  readonly cx: number;
-  readonly cy: number;
-}
-
 interface TreeLayoutResult {
   readonly nodes: readonly PositionedNode[];
   readonly links: readonly PositionedLink[];
-  readonly ghost: GhostSlot | null;
-  readonly ghostPath: string | null;
   readonly width: number;
   readonly height: number;
 }
@@ -81,8 +70,6 @@ interface TreeLayoutResult {
 const EMPTY_LAYOUT: TreeLayoutResult = {
   nodes: [],
   links: [],
-  ghost: null,
-  ghostPath: null,
   width: 0,
   height: 0,
 };
@@ -293,17 +280,9 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
         height = PADDING * 2 + (maxX - minX) + h;
       }
 
-      const ghost = this.buildGhost(positioned, mode);
-      if (ghost) {
-        width = Math.max(width, ghost.slot.x + w + PADDING);
-        height = Math.max(height, ghost.slot.y + h + PADDING);
-      }
-
       return {
         nodes: positioned,
         links,
-        ghost: ghost?.slot ?? null,
-        ghostPath: ghost?.path ?? null,
         width,
         height,
       };
@@ -397,9 +376,35 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
     return linkValidationLabel(node.validation, this.i18n.lang());
   }
 
-  protected ghostLabel(node: LinkResult): string {
-    return this.i18n.t(node.type === 'Problem' ? 'canvas.ghostSolution' : 'canvas.ghostBranch');
+  protected readonly selectedNode = computed(() =>
+    this.nodes().find((node) => node.code === this.selectedCode()) ?? null,
+  );
+
+  /** Quem criou itens nesta árvore (nome + quantos itens), do maior para o menor. */
+  protected readonly contributors = computed(() => {
+    const counts = new Map<string, number>();
+
+    for (const node of this.nodes()) {
+      if (node.autorCode) {
+        counts.set(node.autorCode, (counts.get(node.autorCode) ?? 0) + 1);
+      }
+    }
+
+    return [...counts.entries()]
+      .map(([code, count]) => ({
+        code,
+        count,
+        name: this.authors().get(code) ?? this.i18n.t('canvas.authorFallback'),
+      }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  });
+
+  /** Rótulo do botão flutuante de criar filho do item selecionado. */
+  protected addLabel(): string {
+    const node = this.selectedNode();
+    return this.i18n.t(node?.type === 'Problem' ? 'canvas.ghostSolution' : 'canvas.ghostBranch');
   }
+
 
   protected authorName(code: string | null): string {
     if (!code) {
@@ -414,11 +419,11 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
   }
 
   protected metaLine(node: LinkResult): string {
-    return `${this.authorName(node.autorCode)} · ${this.shortDate(node.creationDate)} · ${node.code.slice(0, 8)}`;
+    return `${this.authorName(node.autorCode)} · ${this.shortDate(node.creationDate)}`;
   }
 
   protected tooltip(node: LinkResult): string {
-    return `${node.title} — ${this.shortDate(node.creationDate)} · ${node.code}`;
+    return `${node.title} · ${this.shortDate(node.creationDate)}`;
   }
 
   protected select(code: string): void {
@@ -717,65 +722,6 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
     const tx = target.x;
     const midX = (sx + tx) / 2;
     return `M ${sx} ${source.cy} L ${midX} ${source.cy} L ${midX} ${target.cy} L ${tx} ${target.cy}`;
-  }
-
-  private buildGhost(
-    positioned: readonly PositionedNode[],
-    mode: TreeLayoutMode,
-  ): { slot: GhostSlot; path: string } | null {
-    const selected = this.selectedCode();
-    const anchor =
-      positioned.find((item) => item.node.code === selected) ??
-      positioned.find((item) => item.depth === 0) ??
-      positioned[0];
-
-    if (!anchor) {
-      return null;
-    }
-
-    const label = this.ghostLabel(anchor.node);
-
-    if (mode === 'portrait') {
-      const children = positioned.filter((item) => item.node.fatherCode === anchor.node.code);
-      const x =
-        children.length > 0
-          ? Math.max(...children.map((item) => item.x + item.w)) + SIBLING_GAP
-          : anchor.x;
-      const y = anchor.y + anchor.h + LEVEL_GAP;
-      const midY = (anchor.y + anchor.h + y) / 2;
-      const path = `M ${anchor.cx} ${anchor.y + anchor.h} L ${anchor.cx} ${midY} L ${x + anchor.w / 2} ${midY} L ${x + anchor.w / 2} ${y}`;
-      return {
-        slot: {
-          fatherCode: anchor.node.code,
-          x,
-          y,
-          label,
-          cx: x + anchor.w / 2,
-          cy: y + anchor.h / 2,
-        },
-        path,
-      };
-    }
-
-    const children = positioned.filter((item) => item.node.fatherCode === anchor.node.code);
-    const x = anchor.x + anchor.w + LEVEL_GAP;
-    const y =
-      children.length > 0
-        ? Math.max(...children.map((item) => item.y + item.h)) + SIBLING_GAP
-        : anchor.y;
-    const midX = (anchor.x + anchor.w + x) / 2;
-    const path = `M ${anchor.x + anchor.w} ${anchor.cy} L ${midX} ${anchor.cy} L ${midX} ${y + anchor.h / 2} L ${x} ${y + anchor.h / 2}`;
-    return {
-      slot: {
-        fatherCode: anchor.node.code,
-        x,
-        y,
-        label,
-        cx: x + anchor.w / 2,
-        cy: y + anchor.h / 2,
-      },
-      path,
-    };
   }
 
   private observeFullscreen(): void {
