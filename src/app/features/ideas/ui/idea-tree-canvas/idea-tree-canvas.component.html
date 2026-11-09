@@ -1,0 +1,368 @@
+<div #canvas class="canvas" tabindex="0" (keydown.escape)="panelClosed.emit()">
+  <div class="canvas__details">
+    <button
+      class="canvas__details-toggle"
+      type="button"
+      (click)="showDetails.set(!showDetails())"
+      [attr.aria-expanded]="showDetails()">
+      {{ 'canvas.details' | translate }}
+      <app-icon name="chevron" [size]="14" [rotate]="showDetails() ? 270 : 90" />
+    </button>
+
+    @if (showDetails()) {
+      <div class="canvas__details-body">
+        @if (rootNode(); as root) {
+          <div class="canvas__root">
+            <span class="canvas__eyebrow">{{
+              'canvas.treeOf' | translate: { team: teamName() || ('canvas.noTeam' | translate) }
+            }}</span>
+            <strong class="canvas__root-title">{{ root.title }}</strong>
+            @if (root.description) {
+              <p class="canvas__root-desc">{{ root.description }}</p>
+            }
+            <span class="canvas__root-meta"
+              >{{ authorName(root.autorCode) }} · {{ shortDate(root.creationDate) }}</span
+            >
+            <div class="canvas__root-actions">
+              <button
+                appButton
+                variant="text"
+                size="sm"
+                type="button"
+                (click)="teamRequested.emit()">
+                {{ 'canvas.team' | translate }}
+              </button>
+            </div>
+          </div>
+        }
+
+        @if (stats(); as s) {
+          <dl class="canvas__stats">
+            <div>
+              <dt>{{ 'canvas.stats.total' | translate }}</dt>
+              <dd>{{ s.total }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'canvas.stats.open' | translate }}</dt>
+              <dd>{{ s.open }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'canvas.stats.selected' | translate }}</dt>
+              <dd>{{ s.selected }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'canvas.stats.discarded' | translate }}</dt>
+              <dd>{{ s.discarded }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'canvas.stats.final' | translate }}</dt>
+              <dd>{{ s.final }}</dd>
+            </div>
+          </dl>
+        }
+
+        <ul class="canvas__legend" [attr.aria-label]="'legend.selected' | translate">
+          <li><span class="dot dot--teal"></span>{{ 'legend.selected' | translate }}</li>
+          <li><span class="dot dot--soft"></span>{{ 'legend.final' | translate }}</li>
+          <li><span class="dot dot--line"></span>{{ 'legend.open' | translate }}</li>
+          <li><span class="dot dot--muted"></span>{{ 'legend.discarded' | translate }}</li>
+          <li><span class="dot dot--empty"></span>{{ 'legend.empty' | translate }}</li>
+        </ul>
+      </div>
+    }
+  </div>
+
+  <div class="canvas__toolbar-wrap">
+    <div class="canvas__toolbar" role="group" [attr.aria-label]="'canvas.settings' | translate">
+      <button
+        type="button"
+        class="canvas__layout-btn"
+        [cdkMenuTriggerFor]="layoutMenu"
+        [attr.aria-label]="'canvas.layoutLabel' | translate"
+        aria-haspopup="menu"
+        (click)="closeSettings()">
+        <app-icon name="tree" [size]="16" />
+        <span class="canvas__layout-label">{{ layoutLabel() }}</span>
+        <app-icon name="chevron" [size]="14" [rotate]="90" />
+      </button>
+      <ng-template #layoutMenu>
+        <div class="bs-menu canvas__layout-menu" cdkMenu>
+          @for (option of layoutOptions; track option.value) {
+            <button
+              class="bs-menu__item"
+              type="button"
+              cdkMenuItem
+              [attr.aria-checked]="layoutMode() === option.value"
+              (click)="chooseLayout(option.value)">
+              {{ layoutLabelFor(option.value) }}
+              @if (layoutMode() === option.value) {
+                <app-icon name="check" [size]="14" />
+              }
+            </button>
+          }
+        </div>
+      </ng-template>
+      <span class="canvas__sep" aria-hidden="true"></span>
+      <button
+        appButton
+        variant="text"
+        size="sm"
+        type="button"
+        class="canvas__icon-btn"
+        [attr.aria-label]="'canvas.settings' | translate"
+        [attr.aria-expanded]="showSettings()"
+        (click)="toggleSettings()">
+        <app-icon name="sliders" [size]="16" />
+      </button>
+      <button
+        appButton
+        variant="text"
+        size="sm"
+        type="button"
+        class="canvas__icon-btn"
+        [attr.aria-label]="'canvas.home' | translate"
+        (click)="goHome()">
+        <app-icon name="home" [size]="16" />
+      </button>
+      <button
+        appButton
+        variant="text"
+        size="sm"
+        type="button"
+        class="canvas__icon-btn"
+        [attr.aria-label]="'canvas.fullscreen' | translate"
+        (click)="toggleFullscreen()">
+        <app-icon name="fullscreen" [size]="16" />
+      </button>
+      <button
+        appButton
+        variant="text"
+        size="sm"
+        type="button"
+        class="canvas__icon-btn"
+        [attr.aria-label]="'canvas.centerSelected' | translate"
+        (click)="goTarget()">
+        <app-icon name="target" [size]="16" />
+      </button>
+      <span class="canvas__sep" aria-hidden="true"></span>
+      <button
+        appButton
+        variant="text"
+        size="sm"
+        type="button"
+        [attr.aria-label]="'canvas.zoomOut' | translate"
+        (click)="zoomBy(0.82)">
+        −
+      </button>
+      <span class="canvas__zoom">{{ zoomLabel() }}</span>
+      <button
+        appButton
+        variant="text"
+        size="sm"
+        type="button"
+        [attr.aria-label]="'canvas.zoomIn' | translate"
+        (click)="zoomBy(1.22)">
+        +
+      </button>
+    </div>
+
+    @if (showSettings()) {
+      <div class="canvas__settings" role="group" [attr.aria-label]="'canvas.settings' | translate">
+        <div class="canvas__settings-head">
+          <h3>{{ 'canvas.options' | translate }}</h3>
+          <button
+            appButton
+            variant="text"
+            size="sm"
+            type="button"
+            [attr.aria-label]="'canvas.closeOptions' | translate"
+            (click)="closeSettings()">
+            <app-icon name="x" [size]="16" />
+          </button>
+        </div>
+        <label class="canvas__switch">
+          <input type="checkbox" [checked]="showDiscarded()" (change)="onDiscardedToggle($event)" />
+          <span class="canvas__switch-track" aria-hidden="true"
+            ><span class="canvas__switch-thumb"></span
+          ></span>
+          <span>{{ 'canvas.showDiscarded' | translate }}</span>
+        </label>
+        <div class="canvas__settings-actions">
+          <button appButton variant="text" size="sm" type="button" (click)="expandAll.emit()">
+            {{ 'canvas.expandAll' | translate }}
+          </button>
+          <span class="canvas__sep" aria-hidden="true"></span>
+          <button appButton variant="text" size="sm" type="button" (click)="collapseAll.emit()">
+            {{ 'canvas.collapseAll' | translate }}
+          </button>
+          <span class="canvas__sep" aria-hidden="true"></span>
+          <button appButton variant="text" size="sm" type="button" (click)="center()">
+            {{ 'canvas.center' | translate }}
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (layout().nodes.length === 0) {
+    <div class="canvas__empty">
+      <app-icon name="flask" [size]="26" class="canvas__empty-icon" />
+      <p>{{ 'canvas.empty' | translate }}</p>
+    </div>
+  } @else {
+    <div class="canvas__minimap-wrap">
+      @if (showMinimap()) {
+        <div
+          class="canvas__minimap"
+          role="group"
+          [attr.aria-label]="'canvas.minimapLabel' | translate">
+          <div class="canvas__minimap-head">
+            <span>{{ 'canvas.minimap' | translate }}</span>
+            <button
+              appButton
+              variant="text"
+              size="sm"
+              type="button"
+              [attr.aria-label]="'canvas.minimapClose' | translate"
+              (click)="showMinimap.set(false)">
+              <app-icon name="x" [size]="14" />
+            </button>
+          </div>
+          <svg
+            class="canvas__minimap-svg"
+            [attr.viewBox]="'0 0 ' + layout().width + ' ' + layout().height"
+            [attr.width]="180"
+            [attr.height]="180"
+            (pointerdown)="onMinimapDown($event)">
+            @for (link of layout().links; track link.key) {
+              <path class="canvas__minimap-link" [attr.d]="link.path" />
+            }
+            @for (item of layout().nodes; track item.node.code) {
+              <circle
+                class="canvas__minimap-dot"
+                [class.canvas__minimap-dot--active]="selectedCode() === item.node.code"
+                [attr.cx]="item.cx"
+                [attr.cy]="item.cy"
+                [attr.r]="item.node.code === selectedCode() ? 70 : 55" />
+            }
+            <rect
+              class="canvas__minimap-viewport"
+              [attr.x]="minimapViewport().x"
+              [attr.y]="minimapViewport().y"
+              [attr.width]="minimapViewport().w"
+              [attr.height]="minimapViewport().h" />
+          </svg>
+        </div>
+      }
+      <button
+        appButton
+        variant="outline"
+        size="sm"
+        type="button"
+        class="canvas__minimap-toggle"
+        [attr.aria-expanded]="showMinimap()"
+        [attr.aria-label]="'canvas.minimapToggle' | translate"
+        (click)="showMinimap.set(!showMinimap())">
+        <app-icon name="fullscreen" [size]="14" />
+        {{ 'canvas.minimap' | translate }}
+      </button>
+    </div>
+    <div
+      class="canvas__stage"
+      role="tree"
+      [attr.aria-label]="'canvas.treeLabel' | translate"
+      [style.width.px]="layout().width"
+      [style.height.px]="layout().height"
+      [style.transform]="stageTransform()">
+      <svg
+        class="canvas__links"
+        [attr.width]="layout().width"
+        [attr.height]="layout().height"
+        aria-hidden="true">
+        @for (link of layout().links; track link.key) {
+          <path class="link" [class.link--active]="link.active" [attr.d]="link.path" />
+        }
+        @if (layout().ghostPath) {
+          <path class="link link--ghost" [attr.d]="layout().ghostPath" />
+        }
+      </svg>
+
+      @for (item of layout().nodes; track item.node.code) {
+        <div
+          class="tree-node"
+          role="treeitem"
+          [attr.data-code]="item.node.code"
+          [attr.aria-level]="item.depth + 1"
+          [attr.aria-selected]="selectedCode() === item.node.code"
+          [attr.aria-expanded]="item.childrenCount > 0 ? !item.collapsed : null"
+          [attr.tabindex]="
+            selectedCode() === item.node.code || (!selectedCode() && item.depth === 0) ? 0 : -1
+          "
+          [class.tree-node--active]="selectedCode() === item.node.code"
+          [class.tree-node--discarded]="item.node.status === 'Discarded'"
+          [class.tree-node--final]="item.node.status === 'Final'"
+          [class.tree-node--selected]="item.node.status === 'Selected'"
+          [class.tree-node--portrait]="isPortrait()"
+          [title]="tooltip(item.node)"
+          [style.left.px]="item.x"
+          [style.top.px]="item.y"
+          [style.width.px]="item.w"
+          [style.height.px]="item.h"
+          (click)="select(item.node.code)"
+          (keydown)="onNodeKeydown($event, item)">
+          <span class="tree-node__type">{{ typeLabel(item.node) }}</span>
+
+          <strong class="tree-node__title" [title]="item.node.title">
+            {{ item.node.title }}
+          </strong>
+
+          <span class="tree-node__meta">{{ metaLine(item.node) }}</span>
+
+          <div class="tree-node__foot">
+            <app-status-badge [status]="item.node.status" />
+            @if (item.node.validation !== 'NotTested') {
+              <span class="tree-node__validation" [title]="validationLabel(item.node)">
+                <app-icon name="flask" [size]="13" />
+              </span>
+            }
+          </div>
+
+          @if (item.childrenCount > 0) {
+            <button
+              type="button"
+              class="tree-node__toggle"
+              [attr.aria-label]="
+                (item.collapsed ? 'canvas.toggleExpand' : 'canvas.toggleCollapse')
+                  | translate: { count: item.childrenCount }
+              "
+              [title]="
+                (item.collapsed ? 'canvas.toggleExpand' : 'canvas.toggleCollapse')
+                  | translate: { count: item.childrenCount }
+              "
+              (click)="toggleCollapse($event, item.node.code)">
+              <app-icon
+                name="chevron"
+                [size]="14"
+                [rotate]="item.collapsed ? (isPortrait() ? 90 : 0) : isPortrait() ? 270 : 180" />
+            </button>
+          }
+        </div>
+      }
+
+      @if (layout().ghost; as ghost) {
+        <button
+          type="button"
+          class="tree-node tree-node--ghost"
+          [class.tree-node--portrait]="isPortrait()"
+          [style.left.px]="ghost.x"
+          [style.top.px]="ghost.y"
+          [style.width.px]="250"
+          [style.height.px]="112"
+          [attr.aria-label]="ghost.label + ' abaixo de ' + ghost.fatherCode"
+          (click)="requestChild($event, ghost.fatherCode)">
+          <span class="tree-node__ghost-label">{{ ghost.label }}</span>
+        </button>
+      }
+    </div>
+  }
+</div>

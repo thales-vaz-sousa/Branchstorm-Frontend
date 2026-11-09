@@ -1,0 +1,62 @@
+{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/app/index.html",
+  "assetGroups": [
+    {
+      "name": "app",
+      "enabled": true,
+      "resources": {
+        "urls": [
+          "./favicon.ico",
+          "./index.html",
+          "./manifest.webmanifest",
+          "/**/*.css",
+          "/**/*.js"
+        ],
+        "cacheConfig": {
+          "strategy": "performance",
+          "maxSize": 100,
+          "maxAge": "1y"
+        }
+      }
+    },
+    {
+      "name": "assets",
+      "enabled": true,
+      "resources": {
+        "urls": ["/**/*.(png|jpg|jpeg|gif|svg|ico|woff|woff2)"],
+        "cacheConfig": {
+          "strategy": "performance",
+          "maxSize": 200,
+          "maxAge": "1y"
+        }
+      }
+    },
+    {
+      "name": "google-fonts-api",
+      "enabled": true,
+      "resources": {
+        "urls": ["https://fonts.googleapis.com/**/!s=*"],
+        "cacheConfig": {
+          "strategy": "lazy",
+          "maxSize": 100,
+          "maxAge": "1y"
+        }
+      }
+    },
+    {
+      "name": "google-fonts-static",
+      "enabled": true,
+      "resources": {
+        "urls": ["https://fonts.gstatic.com/**/*"],
+        "cacheConfig": {
+          "strategy": "lazy",
+          "maxSize": 100,
+          "maxAge": "1y"
+        }
+      }
+    }
+  ],
+  "navigationUrls": ["/**/!/**/*.*", "/**/!/**/*", "!/**/*.*"],
+  "dataGroups": []
+}

@@ -1,0 +1,71 @@
+<app-page-header
+  [eyebrow]="'teams.eyebrow' | translate"
+  [title]="'teams.title' | translate"
+  [description]="'teams.desc' | translate"
+>
+  <div pageActions>
+    <button appButton variant="filled" type="button" (click)="createTeam()">
+      <app-icon name="plus" [size]="16" />
+      {{ 'teams.create' | translate }}
+    </button>
+  </div>
+</app-page-header>
+
+@if (loading()) {
+  <div class="loading-area" aria-busy="true" [attr.aria-label]="'teams.loading' | translate">
+    <app-brand-loader [size]="120" [label]="'teams.loading' | translate" />
+  </div>
+} @else if (error()) {
+  <app-banner tone="error" [title]="'teams.bannerError' | translate">
+    {{ error()?.message }}
+    <button bannerAction appButton variant="outline" size="sm" type="button" (click)="reload()">
+      {{ 'common.retry' | translate }}
+    </button>
+  </app-banner>
+} @else if (teams().length === 0) {
+  <app-empty-state
+    icon="message"
+    [title]="'teams.empty.title' | translate"
+    [description]="'teams.empty.desc' | translate"
+  >
+    <button appButton variant="filled" type="button" (click)="createTeam()">
+      {{ 'teams.create' | translate }}
+    </button>
+  </app-empty-state>
+} @else {
+  <ul class="teams-grid">
+    @for (team of teams(); track team.code) {
+      <li>
+        <a class="team-link" [routerLink]="['/equipes', team.code]">
+          <app-card padding="md" [interactive]="true">
+            <div class="team-card">
+              <header class="team-card__head">
+                <span class="team-card__avatar">{{ team.name.slice(0, 1).toUpperCase() }}</span>
+                <div class="team-card__title">
+                  <strong>{{ team.name }}</strong>
+                  <span class="team-card__meta">{{ 'teams.members' | translate: { count: team.members.length } }}</span>
+                </div>
+                <app-icon name="arrow" [size]="16" class="team-card__arrow" />
+              </header>
+            </div>
+          </app-card>
+        </a>
+      </li>
+    }
+  </ul>
+
+  @if (recentTeams().length > 0) {
+    <section class="recent">
+      <h2 class="recent__title">{{ 'teams.recent' | translate }}</h2>
+      <div class="recent__list">
+        @for (team of recentTeams(); track team.code) {
+          <a appButton variant="outline" size="sm" [routerLink]="['/equipes', team.code]">
+            <app-icon name="history" [size]="14" />
+            {{ team.name }}
+            <span class="recent__time">{{ team.lastOpenedAt | relativeDate }}</span>
+          </a>
+        }
+      </div>
+    </section>
+  }
+}

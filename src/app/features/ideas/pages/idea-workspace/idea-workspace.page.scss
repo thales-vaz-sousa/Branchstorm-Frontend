@@ -1,0 +1,124 @@
+:host {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.loading-area {
+  display: grid;
+  place-items: center;
+  flex: 1;
+  padding: var(--space-16) var(--shell-pad);
+}
+
+/* Mapa imersivo: preenche tudo abaixo do cabeçalho do shell */
+.tree-shell {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.workspace {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.workspace__canvas {
+  position: absolute;
+  inset: 0;
+  min-width: 0;
+  min-height: 0;
+}
+
+.workspace__canvas app-idea-tree-canvas {
+  height: 100%;
+}
+
+.workspace__panel {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 30;
+  width: min(420px, calc(100% - var(--space-8)));
+  min-height: 0;
+  visibility: hidden;
+  transform: translateX(calc(100% + var(--space-8)));
+  transition: transform var(--duration) var(--ease);
+}
+
+.workspace__panel--open {
+  visibility: visible;
+  transform: translateX(0);
+}
+
+.workspace__scrim {
+  display: none;
+}
+
+@media (max-width: 1080px) {
+  .workspace__panel {
+    position: fixed;
+    z-index: 60;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    width: auto;
+    height: min(64vh, 580px);
+    min-height: 320px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    transform: translateY(103%);
+  }
+
+  .workspace__panel--open {
+    transform: translateY(0);
+  }
+
+  /* alça do bottom sheet (estilo FamilySearch) */
+  .workspace__panel::before {
+    content: "";
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    z-index: 2;
+    width: 44px;
+    height: 5px;
+    border-radius: 99px;
+    background: var(--muted);
+    opacity: 0;
+    transform: translateX(-50%);
+  }
+
+  .workspace__panel--open::before {
+    opacity: 1;
+  }
+
+  .workspace__panel app-node-detail-panel .panel {
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 14px 14px 0 0;
+  }
+
+  .workspace__scrim {
+    position: fixed;
+    z-index: 55;
+    inset: 0;
+    display: block;
+    border: 0;
+    background: var(--overlay);
+    cursor: pointer;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace__panel {
+    transition: none;
+  }
+}
