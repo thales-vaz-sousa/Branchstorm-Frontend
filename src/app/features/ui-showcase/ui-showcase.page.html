@@ -1,0 +1,181 @@
+<app-page-header
+  [eyebrow]="'ui.eyebrow' | translate"
+  [title]="'ui.title' | translate"
+  [description]="'ui.desc' | translate"
+/>
+
+<section class="section">
+  <h2 class="section__title">{{ 'ui.sec.buttons' | translate }}</h2>
+  <div class="row">
+    <button appButton variant="filled" type="button">{{ 'canvas.ghostSolution' | translate }}</button>
+    <button appButton variant="outline" type="button">{{ 'panel.select' | translate }}</button>
+    <button appButton variant="text" type="button">{{ 'common.cancel' | translate }}</button>
+    <button appButton variant="filled" type="button" [loading]="true">{{ 'ui.btn.saving' | translate }}</button>
+    <button appButton variant="outline" type="button" [disabled]="true">{{ 'ui.btn.unavailable' | translate }}</button>
+    <button appButton variant="outline" size="sm" type="button">
+      <app-icon name="plus" [size]="14" />
+      {{ 'ws.newNode' | translate }}
+    </button>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section__title">{{ 'ui.sec.pills' | translate }}</h2>
+  <div class="row">
+    <app-pill tone="open">{{ 'status.open' | translate }}</app-pill>
+    <app-pill tone="selected">{{ 'status.selected' | translate }}</app-pill>
+    <app-pill tone="discarded">{{ 'status.discarded' | translate }}</app-pill>
+    <app-pill tone="final">{{ 'status.final' | translate }}</app-pill>
+    <app-pill tone="neutral">{{ 'validation.notTested' | translate }}</app-pill>
+    <app-pill tone="soft">{{ 'validation.validated' | translate }}</app-pill>
+    <app-pill tone="danger">{{ 'validation.refuted' | translate }}</app-pill>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section__title">{{ 'ui.sec.fields' | translate }}</h2>
+  <div class="grid">
+    <app-field controlId="ui-name" [label]="'ui.field.name' | translate" [hint]="'ui.field.hint' | translate">
+      <input
+        id="ui-name"
+        class="bs-input"
+        [value]="name()"
+        (input)="onNameInput($event)"
+        [placeholder]="'ui.field.namePh' | translate"
+      />
+    </app-field>
+
+    <app-field controlId="ui-team" [label]="'link.teamLabel' | translate" required="true">
+      <select id="ui-team" class="bs-select">
+        <option>{{ 'ui.field.teamPh' | translate }}</option>
+        <option>Plataforma</option>
+      </select>
+    </app-field>
+
+    <app-field
+      controlId="ui-error"
+      [label]="'login.emailLabel' | translate"
+      [error]="'login.emailError' | translate"
+      required="true"
+    >
+      <input id="ui-email" class="bs-input" [attr.aria-invalid]="true" value="nome@" />
+    </app-field>
+
+    <app-field controlId="ui-desc" [label]="'link.descLabel' | translate">
+      <textarea id="ui-desc" class="bs-textarea" rows="3"></textarea>
+    </app-field>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section__title">{{ 'ui.sec.tabs' | translate }}</h2>
+  <app-tabs [tabs]="tabs()" [(active)]="tab" />
+  <div class="tab-panel" role="tabpanel" [attr.id]="'panel-' + tab()">
+    <p class="muted">{{ 'ui.tabContent' | translate: { tab: tab() } }}</p>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section__title">{{ 'ui.sec.banners' | translate }}</h2>
+  <div class="stack">
+    <app-banner tone="info" [title]="'ui.banner.coldTitle' | translate">
+      {{ 'ui.banner.coldBody' | translate }}
+    </app-banner>
+    <app-banner tone="demo">{{ 'shell.demo' | translate }}</app-banner>
+    <app-banner tone="error" [title]="'ui.banner.errorTitle' | translate">
+      {{ 'ui.banner.errorBody' | translate }}
+    </app-banner>
+    <app-banner tone="success" [title]="'ui.banner.okTitle' | translate">
+      {{ 'ui.banner.okBody' | translate }}
+    </app-banner>
+  </div>
+  <div class="row">
+    <button appButton variant="outline" type="button" (click)="toast('info')">{{ 'ui.toast.notice' | translate }}</button>
+    <button appButton variant="outline" type="button" (click)="toast('success')">{{ 'ui.toast.success' | translate }}</button>
+    <button appButton variant="outline" type="button" (click)="toast('error')">{{ 'ui.toast.error' | translate }}</button>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section__title">{{ 'ui.sec.dialogs' | translate }}</h2>
+  <div class="row">
+    <button appButton variant="outline" type="button" (click)="openInfoDialog()">
+      {{ 'ui.dialog.open' | translate }}
+    </button>
+    <button appButton variant="outline" type="button" (click)="openReasonDialog()">
+      {{ 'ui.dialog.reason' | translate }}
+    </button>
+    <button appButton variant="filled" type="button" (click)="confirm()">
+      {{ 'ui.dialog.confirm' | translate }}
+    </button>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section__title">{{ 'ui.sec.menu' | translate }}</h2>
+  <div class="row">
+    <button appButton variant="outline" type="button" [cdkMenuTriggerFor]="demoMenu">
+      {{ 'ui.menu.open' | translate }}
+      <app-icon name="chevron" [rotate]="90" [size]="14" />
+    </button>
+    <button appButton variant="outline" type="button" [appTooltip]="'ui.menu.tooltip' | translate">
+      {{ 'ui.menu.center' | translate }}
+    </button>
+  </div>
+
+  <ng-template #demoMenu>
+    <div class="bs-menu" cdkMenu>
+      <div class="bs-menu__label">{{ 'ui.menu.tree' | translate }}</div>
+      <button class="bs-menu__item" type="button" cdkMenuItem>{{ 'canvas.expandAll' | translate }}</button>
+      <button class="bs-menu__item" type="button" cdkMenuItem>{{ 'canvas.collapseAll' | translate }}</button>
+      <div class="bs-menu__divider" role="separator"></div>
+      <button class="bs-menu__item bs-menu__item--danger" type="button" cdkMenuItem>
+        {{ 'user.logout' | translate }}
+      </button>
+    </div>
+  </ng-template>
+</section>
+
+<section class="section">
+  <h2 class="section__title">{{ 'ui.sec.cards' | translate }}</h2>
+  <div class="grid">
+    <app-card padding="md">
+      <div class="card-title">Produto</div>
+      <p class="muted">{{ 'ui.card.members' | translate }} · {{ 'ui.card.problems' | translate }}</p>
+    </app-card>
+    <app-card padding="md">
+      <div class="card-title">Plataforma</div>
+      <p class="muted">{{ 'ui.card.members2' | translate }} · {{ 'ui.card.problem' | translate }}</p>
+    </app-card>
+  </div>
+
+  <app-empty-state
+    icon="flask"
+    [title]="'ui.empty.title' | translate"
+    [description]="'ui.empty.desc' | translate"
+  />
+
+  <div class="row">
+    <app-spinner [size]="20" />
+    <span class="muted">{{ 'ui.loadingTree' | translate }}</span>
+  </div>
+
+  <div class="skeleton-row">
+    <div class="bs-skeleton skeleton-line"></div>
+    <div class="bs-skeleton skeleton-line skeleton-line--short"></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section__title">{{ 'ui.sec.icons' | translate }}</h2>
+  <div class="icons">
+    <span class="icon-cell"><app-icon name="chevron" /><code>chevron</code></span>
+    <span class="icon-cell"><app-icon name="plus" /><code>plus</code></span>
+    <span class="icon-cell"><app-icon name="x" /><code>x</code></span>
+    <span class="icon-cell"><app-icon name="check" /><code>check</code></span>
+    <span class="icon-cell"><app-icon name="arrow" /><code>arrow</code></span>
+    <span class="icon-cell"><app-icon name="history" /><code>history</code></span>
+    <span class="icon-cell"><app-icon name="flask" /><code>flask</code></span>
+    <span class="icon-cell"><app-icon name="message" /><code>message</code></span>
+  </div>
+</section>

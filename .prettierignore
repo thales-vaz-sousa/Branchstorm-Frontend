@@ -1,0 +1,7 @@
+dist
+.angular
+node_modules
+documentation/build
+documentation/.docusaurus
+coverage
+package-lock.json

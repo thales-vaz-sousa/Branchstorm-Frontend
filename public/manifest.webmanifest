@@ -1,0 +1,33 @@
+{
+  "name": "Branchstorm",
+  "short_name": "Branchstorm",
+  "description": "Plataforma colaborativa para evoluir, validar e versionar ideias em árvore.",
+  "lang": "pt-BR",
+  "start_url": "./#/equipes",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#f6fafa",
+  "background_color": "#f6fafa",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "brand/icon-color.png",
+      "sizes": "2000x2000",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "brand/icon-color.png",
+      "sizes": "2000x2000",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "brand/icon.png",
+      "sizes": "2000x2000",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

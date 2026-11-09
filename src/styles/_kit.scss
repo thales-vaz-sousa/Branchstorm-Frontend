@@ -1,0 +1,224 @@
+/* ==========================================================================
+   Primitivas globais do kit (diretivas e elementos nativos)
+   ========================================================================== */
+
+/* Botão ------------------------------------------------------------------ */
+.bs-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.bs-button--sm {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: var(--text-xs);
+}
+
+.bs-button--block {
+  width: 100%;
+}
+
+.bs-button--filled {
+  background: var(--action-bg);
+  color: var(--on-solid);
+}
+
+.bs-button--filled:hover:not([aria-disabled="true"]):not(:disabled) {
+  background: var(--action-hover);
+}
+
+.bs-button--outline {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.bs-button--outline:hover:not([aria-disabled="true"]):not(:disabled) {
+  border-color: var(--teal);
+  color: var(--tink);
+}
+
+.bs-button--text {
+  background: transparent;
+  color: var(--tink);
+  padding-inline: 8px;
+}
+
+.bs-button--text:hover:not([aria-disabled="true"]):not(:disabled) {
+  color: var(--teal);
+}
+
+.bs-button[aria-disabled="true"],
+.bs-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.bs-button--loading {
+  position: relative;
+  color: transparent !important;
+}
+
+.bs-button--loading::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  color: var(--on-solid);
+  animation: bs-spin 0.7s linear infinite;
+}
+
+.bs-button--outline.bs-button--loading::after,
+.bs-button--text.bs-button--loading::after {
+  color: var(--tink);
+}
+
+@keyframes bs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Campos ----------------------------------------------------------------- */
+.bs-input,
+.bs-select,
+.bs-textarea {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.4;
+  transition: border-color var(--duration-fast) var(--ease);
+}
+
+.bs-textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.bs-select {
+  appearance: none;
+  padding-right: 36px;
+  background-image: none;
+}
+
+.bs-input::placeholder,
+.bs-textarea::placeholder {
+  color: var(--muted);
+}
+
+.bs-input:hover,
+.bs-select:hover,
+.bs-textarea:hover {
+  border-color: var(--muted);
+}
+
+.bs-input:focus,
+.bs-select:focus,
+.bs-textarea:focus {
+  outline: 2px solid var(--teal);
+  outline-offset: 1px;
+  border-color: var(--teal);
+}
+
+.bs-input[aria-invalid="true"],
+.bs-select[aria-invalid="true"],
+.bs-textarea[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+/* Cartão ----------------------------------------------------------------- */
+.bs-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+}
+
+/* Menu (CDK) ------------------------------------------------------------- */
+.bs-menu {
+  min-width: 200px;
+  padding: var(--space-2);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+}
+
+.bs-menu__label {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.bs-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--ink);
+  font-size: var(--text-sm);
+  text-align: left;
+  transition: background-color var(--duration-fast) var(--ease);
+}
+
+.bs-menu__item:hover,
+.bs-menu__item:focus-visible {
+  background: var(--soft);
+  color: var(--tink);
+  outline: none;
+}
+
+.bs-menu__item--danger:hover,
+.bs-menu__item--danger:focus-visible {
+  color: var(--danger);
+}
+
+.bs-menu__divider {
+  height: 1px;
+  margin: var(--space-2) 0;
+  background: var(--line);
+}
+
+/* Tooltip ---------------------------------------------------------------- */
+.bs-tooltip {
+  padding: 6px 10px;
+  background: var(--ink);
+  color: var(--bg);
+  border-radius: 6px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+}

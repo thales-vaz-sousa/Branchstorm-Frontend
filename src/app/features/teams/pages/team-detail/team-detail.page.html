@@ -1,0 +1,221 @@
+@if (loading() && !team()) {
+  <div class="loading-area" aria-busy="true" [attr.aria-label]="'common.loading' | translate">
+    <app-brand-loader [size]="120" [label]="'common.loading' | translate" />
+  </div>
+} @else if (error() && !team()) {
+  <app-empty-state
+    icon="message"
+    [title]="'detail.notFound.title' | translate"
+    [description]="'detail.notFound.desc' | translate"
+  >
+    <a appButton variant="outline" routerLink="/equipes">{{ 'ws.backTeams' | translate }}</a>
+  </app-empty-state>
+} @else if (team(); as currentTeam) {
+  <app-page-header
+    [eyebrow]="'detail.eyebrow' | translate"
+    [title]="currentTeam.name"
+    [description]="'teams.members' | translate: { count: currentTeam.members.length }"
+  >
+    <div pageActions>
+      <a appButton variant="outline" routerLink="/equipes">
+        <app-icon name="chevron" [rotate]="180" [size]="14" />
+        {{ 'nav.teams' | translate }}
+      </a>
+      <button
+        appButton
+        variant="filled"
+        type="button"
+        [loading]="creatingProblem()"
+        (click)="createProblem()"
+      >
+        <app-icon name="plus" [size]="16" />
+        {{ 'detail.newProblem' | translate }}
+      </button>
+    </div>
+  </app-page-header>
+
+  <div class="detail">
+    <section class="detail__main" aria-labelledby="problems-title">
+      <div class="section-head">
+        <h2 id="problems-title" class="section-head__title">{{ 'detail.problems' | translate }}</h2>
+      </div>
+
+      @if (problemsLoading()) {
+        <div class="problems-loading">
+          <app-spinner [size]="20" />
+          <span>{{ 'detail.problemsLoading' | translate }}</span>
+        </div>
+      } @else if (problemsError()) {
+        <app-banner tone="error" [title]="'detail.problemsError' | translate">
+          {{ problemsError()?.message }}
+          <button bannerAction appButton variant="outline" size="sm" type="button" (click)="reloadProblems()">
+            {{ 'common.retry' | translate }}
+          </button>
+        </app-banner>
+      } @else if (problems().length === 0) {
+        <app-empty-state
+          icon="flask"
+          [title]="'detail.problemsEmpty.title' | translate"
+          [description]="'detail.problemsEmpty.desc' | translate"
+        >
+          <button appButton variant="filled" type="button" (click)="createProblem()">
+            {{ 'detail.createProblem' | translate }}
+          </button>
+        </app-empty-state>
+      } @else {
+        <ul class="problems">
+          @for (problem of problems(); track problem.code) {
+            <li>
+              <a class="problem" [routerLink]="['/ideias', problem.code]">
+                <div class="problem__head">
+                  <app-status-badge [status]="problem.status" />
+                  <app-validation-badge [validation]="problem.validation" />
+                  <span class="problem__arrow" aria-hidden="true">
+                    <app-icon name="arrow" [size]="16" />
+                  </span>
+                </div>
+                <h3 class="problem__title">{{ problem.title }}</h3>
+                @if (problem.description) {
+                  <p class="problem__description">{{ problem.description }}</p>
+                }
+                <span class="problem__date">{{ problem.creationDate | relativeDate }}</span>
+              </a>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <aside class="detail__side" aria-labelledby="members-title">
+      <app-card padding="md">
+        <div class="section-head section-head--compact">
+          <h2 id="members-title" class="section-head__title">{{ 'detail.members' | translate }}</h2>
+          <span class="section-head__count">{{ members().length }}</span>
+        </div>
+
+        <form class="team-fields" (ngSubmit)="save()">
+          <app-field
+            controlId="team-name"
+            [label]="'detail.teamName' | translate"
+            required
+            [error]="
+              nameControl.touched && nameControl.invalid
+                ? ('detail.teamNameError' | translate)
+                : ''
+            "
+          >
+            <input
+              id="team-name"
+              class="bs-input"
+              type="text"
+              [formControl]="nameControl"
+              maxlength="80"
+            />
+          </app-field>
+        </form>
+
+        <ul class="members">
+          @for (member of members(); track member.userCode) {
+            <li class="member">
+              <span class="member__avatar">{{ initials(memberName(member.userCode)) }}</span>
+              <div class="member__copy">
+                <strong>{{ memberName(member.userCode) }}</strong>
+                <span>{{ memberEmail(member.userCode) }}</span>
+              </div>
+              <div class="member__role">
+                <app-role-badge [role]="roleName(member.role)" />
+                <select
+                  class="bs-select member__select"
+                  [value]="roleName(member.role)"
+                  [attr.aria-label]="'detail.memberRole' | translate: { name: memberName(member.userCode) }"
+                  (change)="changeRole(member.userCode, roleValue($any($event.target).value))"
+                >
+                  @for (name of roleNames; track name) {
+                    <option [value]="name" [selected]="name === roleName(member.role)">
+                      {{ roleLabel(name) }}
+                    </option>
+                  }
+                </select>
+              </div>
+              <button
+                appButton
+                variant="text"
+                size="sm"
+                type="button"
+                class="member__remove"
+                [attr.aria-label]="'detail.removeMember' | translate: { name: memberName(member.userCode) }"
+                (click)="removeMember(member.userCode)"
+              >
+                <app-icon name="x" [size]="16" />
+              </button>
+            </li>
+          }
+        </ul>
+
+        @if (availableUsers().length > 0) {
+          <div class="add-member">
+            <app-field controlId="member-user" [label]="'detail.addPerson' | translate">
+              <select
+                id="member-user"
+                class="bs-select"
+                [value]="selectedUserCode() ?? ''"
+                (change)="onUserSelected($any($event.target).value)"
+              >
+                <option value="">{{ 'detail.select' | translate }}</option>
+                @for (user of availableUsers(); track user.code) {
+                  <option [value]="user.code">{{ user.name }}</option>
+                }
+              </select>
+            </app-field>
+
+            <app-field controlId="member-role" [label]="'detail.role' | translate">
+              <select
+                id="member-role"
+                class="bs-select"
+                [value]="roleName(selectedRole())"
+                (change)="onRoleSelected($any($event.target).value)"
+              >
+                @for (name of roleNames; track name) {
+                  <option [value]="name" [selected]="name === roleName(selectedRole())">
+                    {{ roleLabel(name) }}
+                  </option>
+                }
+              </select>
+            </app-field>
+
+            <button
+              appButton
+              variant="outline"
+              type="button"
+              [disabled]="!selectedUserCode()"
+              (click)="addMember()"
+            >
+              <app-icon name="plus" [size]="16" />
+              {{ 'detail.add' | translate }}
+            </button>
+
+            <p class="role-hint">{{ roleDescription(roleName(selectedRole())) }}</p>
+          </div>
+        }
+
+        <div class="team-save">
+          <button
+            appButton
+            variant="filled"
+            type="button"
+            [disabled]="!dirty()"
+            [loading]="saving()"
+            (click)="save()"
+          >
+            {{ 'detail.save' | translate }}
+          </button>
+          @if (dirty()) {
+            <button appButton variant="text" type="button" (click)="reset()">
+              {{ 'detail.undo' | translate }}
+            </button>
+          }
+        </div>
+      </app-card>
+    </aside>
+  </div>
+}

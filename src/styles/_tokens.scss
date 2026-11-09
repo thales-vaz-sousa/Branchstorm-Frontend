@@ -1,0 +1,113 @@
+/* ==========================================================================
+   Branchstorm design tokens
+   Fonte única de verdade para cor, tipografia, espaço, raio e movimento.
+   Valores definidos em public/brand/PLANO-FRONTEND.md §3.
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* Cor ------------------------------------------------------------------ */
+  --bg: #f6fafa;
+  --card: #ffffff;
+  --ink: #0e2a30;
+  --muted: #4b6168;
+  --teal: #1a8796;
+  --tink: #126b77;
+  --soft: #e4f1f3;
+  --line: #d5e4e7;
+  --danger: #b42318;
+  --on-solid: #ffffff;
+
+  /* Derivados de uso interno (mesma família, sem novas cores) ------------- */
+  --field-ring: #1a8796;
+  --overlay: rgba(14, 42, 48, 0.46);
+  --dialog-shadow: 0 24px 64px rgba(9, 34, 39, 0.18);
+  --action-bg: var(--tink);
+  --action-hover: var(--teal);
+
+  /* Tipografia ----------------------------------------------------------- */
+  --font-serif: "Cormorant Garamond", Georgia, serif;
+  --font-sans: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.0625rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 2rem;
+  --text-4xl: 2.5rem;
+
+  /* Espaçamento: múltiplos de 4px ---------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Raios (cards/controles 8px) ------------------------------------------ */
+  --radius-card: 8px;
+  --radius-control: 8px;
+  --radius-pill: 99px;
+
+  /* Movimento ------------------------------------------------------------ */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 120ms;
+  --duration: 180ms;
+
+  /* Layout --------------------------------------------------------------- */
+  --shell-max: 1280px;
+  --shell-pad: 24px;
+  --header-height: 64px;
+  --panel-width: 380px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --bg: #0a1719;
+    --card: #102226;
+    --ink: #e8f2f3;
+    --muted: #9db3b7;
+    --teal: #4db6c4;
+    --tink: #7acbd6;
+    --soft: #14313a;
+    --line: #1e3a40;
+    --danger: #f2877d;
+    --on-solid: #0a1719;
+
+    --field-ring: #4db6c4;
+    --overlay: rgba(0, 0, 0, 0.62);
+    --dialog-shadow: 0 24px 64px rgba(0, 0, 0, 0.48);
+    --action-bg: var(--teal);
+    --action-hover: var(--tink);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0a1719;
+  --card: #102226;
+  --ink: #e8f2f3;
+  --muted: #9db3b7;
+  --teal: #4db6c4;
+  --tink: #7acbd6;
+  --soft: #14313a;
+  --line: #1e3a40;
+  --danger: #f2877d;
+  --on-solid: #0a1719;
+
+  --field-ring: #4db6c4;
+  --overlay: rgba(0, 0, 0, 0.62);
+  --dialog-shadow: 0 24px 64px rgba(0, 0, 0, 0.48);
+  --action-bg: var(--teal);
+  --action-hover: var(--tink);
+}

@@ -1,0 +1,65 @@
+@if (loading() && !root()) {
+  <div class="loading-area" aria-busy="true" [attr.aria-label]="'ws.loading' | translate">
+    <app-brand-loader [size]="140" [label]="'ws.loading' | translate" />
+  </div>
+} @else if (error() && !root()) {
+  <app-empty-state
+    icon="flask"
+    [title]="'ws.notFound.title' | translate"
+    [description]="'ws.notFound.desc' | translate">
+    <a appButton variant="outline" routerLink="/equipes">{{ 'ws.backTeams' | translate }}</a>
+  </app-empty-state>
+} @else if (root(); as rootNode) {
+  <div class="tree-shell">
+    <div class="workspace">
+      <section class="workspace__canvas" [attr.aria-label]="'canvas.treeLabel' | translate">
+        <app-idea-tree-canvas
+          [nodes]="displayed()"
+          [childrenByFather]="displayedChildrenByFather()"
+          [childCounts]="childCounts()"
+          [authors]="authors()"
+          [selectedCode]="selectedNode()?.code ?? null"
+          [collapsedCodes]="collapsedCodes()"
+          [layoutMode]="layoutMode()"
+          [stats]="stats()"
+          [showDiscarded]="showDiscarded()"
+          [rootNode]="rootNode"
+          [teamName]="teamName()"
+          (nodeSelected)="selectNode($event)"
+          (collapseToggled)="toggleCollapse($event)"
+          (panelClosed)="closePanel()"
+          (createChildRequested)="onCreateChildRequested($event)"
+          (expandAll)="expandAll()"
+          (collapseAll)="collapseAll()"
+          (showDiscardedChange)="setShowDiscarded($event)"
+          (layoutChange)="onLayoutChange($event)"
+          (homeRequested)="goHome()"
+          (teamRequested)="goTeam()" />
+      </section>
+
+      @if (drawerOpen()) {
+        <button
+          class="workspace__scrim"
+          type="button"
+          [attr.aria-label]="'panel.close' | translate"
+          (click)="closePanel()"></button>
+      }
+
+      <div
+        class="workspace__panel"
+        [class.workspace__panel--open]="drawerOpen()"
+        [attr.aria-hidden]="!drawerOpen()">
+        <app-node-detail-panel
+          [node]="selectedNode()"
+          [path]="selectedPath()"
+          [children]="selectedChildren()"
+          [allNodes]="nodes()"
+          [saving]="saving()"
+          (nodeSelected)="selectNode($event)"
+          (createChild)="createChild($event)"
+          (treeChanged)="refresh()"
+          (closed)="closePanel()" />
+      </div>
+    </div>
+  </div>
+}

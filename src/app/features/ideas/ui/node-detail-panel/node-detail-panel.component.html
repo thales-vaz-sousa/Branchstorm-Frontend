@@ -1,0 +1,325 @@
+@if (node(); as current) {
+  <aside class="panel" [attr.aria-label]="'panel.label' | translate">
+    <header class="panel__head">
+      <div class="panel__top">
+        <span class="panel__avatar" aria-hidden="true">
+          {{ initials(authorName(current.autorCode)) }}
+        </span>
+        <div class="panel__ident">
+          <span class="panel__type">{{ typeLabel(current) }}</span>
+          <span class="panel__code">{{ current.code }}</span>
+        </div>
+        <button
+          appButton
+          variant="text"
+          size="sm"
+          class="panel__close"
+          type="button"
+          [attr.aria-label]="'panel.close' | translate"
+          (click)="closed.emit()">
+          <app-icon name="x" [size]="16" />
+        </button>
+      </div>
+
+      <h2 class="panel__title">{{ current.title }}</h2>
+
+      <div class="panel__badges">
+        <app-status-badge [status]="current.status" />
+        <app-validation-badge [validation]="current.validation" />
+      </div>
+
+      <div class="panel__actions">
+        <button
+          appButton
+          variant="filled"
+          size="sm"
+          type="button"
+          (click)="createChild.emit(current)">
+          <app-icon name="plus" [size]="15" />
+          {{ childLabel() }}
+        </button>
+        <button
+          appButton
+          variant="outline"
+          size="sm"
+          type="button"
+          [disabled]="!canSelect() || saving()"
+          (click)="selectNode()">
+          {{ 'panel.select' | translate }}
+        </button>
+        <button
+          appButton
+          variant="outline"
+          size="sm"
+          type="button"
+          [disabled]="!canFinal() || saving()"
+          (click)="markFinal()">
+          {{ 'panel.markFinal' | translate }}
+        </button>
+      </div>
+    </header>
+
+    <app-tabs
+      class="panel__tabs"
+      [tabs]="tabs()"
+      [active]="activeTab()"
+      (activeChange)="activeTab.set($event)" />
+
+    <div
+      class="panel__body"
+      role="tabpanel"
+      [id]="'panel-' + activeTab()"
+      [attr.aria-labelledby]="'tab-' + activeTab()">
+      @switch (activeTab()) {
+        @case ('details') {
+          <div class="tab-body">
+            <section class="block">
+              <h3>{{ 'panel.desc' | translate }}</h3>
+              <p class="muted">
+                {{ current.description || ('panel.noDesc' | translate) }}
+              </p>
+            </section>
+
+            @if (current.reason) {
+              <blockquote class="quote">{{ current.reason }}</blockquote>
+            }
+
+            <dl class="meta">
+              <div>
+                <dt>{{ 'panel.author' | translate }}</dt>
+                <dd>{{ authorName(current.autorCode) }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'panel.team' | translate }}</dt>
+                <dd>{{ teamName(current.teamCode) }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'panel.createdAt' | translate }}</dt>
+                <dd>{{ current.creationDate | dateTime }}</dd>
+              </div>
+              <div>
+                <dt>{{ 'panel.code' | translate }}</dt>
+                <dd>
+                  <code>{{ current.code }}</code>
+                </dd>
+              </div>
+            </dl>
+
+            <section class="block">
+              <h3>{{ 'panel.pathToHere' | translate }}</h3>
+              <ol class="path">
+                @for (item of path(); track item.code) {
+                  <li>
+                    <button
+                      type="button"
+                      [class.path__current]="item.code === current.code"
+                      (click)="nodeSelected.emit(item.code)">
+                      {{ item.title }}
+                    </button>
+                  </li>
+                }
+              </ol>
+            </section>
+
+            <section class="block">
+              <h3>{{ 'panel.branches' | translate: { count: children().length } }}</h3>
+
+              @if (children().length === 0) {
+                <p class="muted small">{{ 'panel.noBranches' | translate }}</p>
+              } @else {
+                <ul class="child-list">
+                  @for (child of children(); track child.code) {
+                    <li>
+                      <button type="button" (click)="nodeSelected.emit(child.code)">
+                        <app-status-badge [status]="child.status" />
+                        <span>{{ child.title }}</span>
+                      </button>
+                    </li>
+                  }
+                </ul>
+              }
+            </section>
+          </div>
+        }
+
+        @case ('history') {
+          <div class="tab-body">
+            @if (current.history.length === 0) {
+              <div class="inline-empty">
+                <app-icon name="history" [size]="22" />
+                <p>{{ 'panel.historyEmpty' | translate }}</p>
+              </div>
+            } @else {
+              <ol class="timeline">
+                @for (entry of current.history; track entry.code) {
+                  <li>
+                    <span class="timeline__dot" aria-hidden="true"></span>
+                    <div>
+                      <p>{{ entry.event }}</p>
+                      <span class="subtle small">{{ entry.creationDate | dateTime }}</span>
+                    </div>
+                  </li>
+                }
+              </ol>
+            }
+          </div>
+        }
+
+        @case ('hypotheses') {
+          <div class="tab-body">
+            <div class="tab-actions">
+              <p class="muted small">
+                {{ 'panel.hypoIntro' | translate }}
+              </p>
+              <button
+                appButton
+                variant="outline"
+                size="sm"
+                type="button"
+                (click)="createHypothesis()">
+                <app-icon name="plus" [size]="15" />
+                {{ 'panel.newHypothesis' | translate }}
+              </button>
+            </div>
+
+            @if (hypothesesState().loading) {
+              <div class="loading">
+                <app-spinner [size]="16" />
+                <span>{{ 'panel.loadingHypotheses' | translate }}</span>
+              </div>
+            } @else if (hypothesesState().error) {
+              <app-banner tone="error" [title]="'panel.hypoError' | translate">
+                {{ hypothesesState().error?.message }}
+                <button
+                  bannerAction
+                  appButton
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  (click)="reloadHypotheses()">
+                  {{ 'common.retry' | translate }}
+                </button>
+              </app-banner>
+            } @else if (hypothesesState().items.length === 0) {
+              <div class="inline-empty">
+                <app-icon name="flask" [size]="22" />
+                <p>{{ 'panel.hypoEmpty' | translate }}</p>
+              </div>
+            } @else {
+              <div class="hypothesis-list">
+                @for (hypothesis of hypothesesState().items; track hypothesis.code) {
+                  <article class="hypothesis">
+                    <header>
+                      <app-validation-badge [validation]="resultBadge(hypothesis)" />
+                      <span class="subtle small">{{ hypothesis.creationDate | relativeDate }}</span>
+                    </header>
+                    <p>{{ hypothesis.description }}</p>
+                    <div class="criteria">
+                      <span>{{ 'panel.successCriteria' | translate }}</span>
+                      <p>{{ hypothesis.successCriteria }}</p>
+                    </div>
+                    <footer>
+                      <button
+                        appButton
+                        variant="text"
+                        size="sm"
+                        type="button"
+                        (click)="registerResult(hypothesis)">
+                        {{
+                          hypothesis.result
+                            ? ('panel.updateResult' | translate)
+                            : ('panel.registerResult' | translate)
+                        }}
+                      </button>
+                    </footer>
+                  </article>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        @case ('feedback') {
+          <div class="tab-body">
+            <div class="feedback-head">
+              <div class="feedback-score">
+                <app-rating-stars [value]="feedbackAverage()" [showValue]="true" />
+                <span class="subtle small">
+                  {{ 'panel.reviews' | translate: { count: feedbackState().items.length } }}
+                </span>
+              </div>
+              <button
+                appButton
+                variant="outline"
+                size="sm"
+                type="button"
+                [disabled]="!canFeedback()"
+                [attr.title]="canFeedback() ? null : ('panel.feedbackOnlyOpen' | translate)"
+                (click)="createFeedback()">
+                <app-icon name="message" [size]="15" />
+                {{ 'panel.comment' | translate }}
+              </button>
+            </div>
+
+            @if (!canFeedback()) {
+              <p class="hint">
+                {{ 'panel.feedbackHint' | translate }}
+              </p>
+            }
+
+            @if (feedbackState().loading) {
+              <div class="loading">
+                <app-spinner [size]="16" />
+                <span>{{ 'panel.loadingFeedback' | translate }}</span>
+              </div>
+            } @else if (feedbackState().error) {
+              <app-banner tone="error" [title]="'panel.feedbackError' | translate">
+                {{ feedbackState().error?.message }}
+                <button
+                  bannerAction
+                  appButton
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  (click)="reloadFeedback()">
+                  {{ 'common.retry' | translate }}
+                </button>
+              </app-banner>
+            } @else if (feedbackState().items.length === 0) {
+              <div class="inline-empty">
+                <app-icon name="message" [size]="22" />
+                <p>{{ 'panel.feedbackEmpty' | translate }}</p>
+              </div>
+            } @else {
+              <ul class="feedback-list">
+                @for (feedback of feedbackState().items; track feedback.code) {
+                  <li class="feedback">
+                    <header>
+                      <span class="feedback__avatar">
+                        {{ initials(authorName(feedback.autorCode)) }}
+                      </span>
+                      <div>
+                        <strong>{{ authorName(feedback.autorCode) }}</strong>
+                        <span class="subtle small">{{ feedback.creationDate | relativeDate }}</span>
+                      </div>
+                      <app-rating-stars [value]="feedback.rating" />
+                    </header>
+                    <p>{{ feedback.test }}</p>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        }
+      }
+    </div>
+  </aside>
+} @else {
+  <aside class="panel panel--empty">
+    <app-icon name="arrow" [size]="22" />
+    <h2>{{ 'panel.emptyTitle' | translate }}</h2>
+    <p class="muted">
+      {{ 'panel.emptyBody' | translate }}
+    </p>
+  </aside>
+}
