@@ -41,7 +41,7 @@ export const appConfig: ApplicationConfig = {
     // PWA: service worker só em produção (dev não cacheia, para HMR funcionar).
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),
-      registrationStrategy: 'registerApplication',
+      registrationStrategy: 'registerWhenStable',
     }),
   ],
 };
