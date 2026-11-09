@@ -69,7 +69,10 @@ export class IdeaWorkspacePage {
 
   protected readonly code = signal<string>('');
   protected readonly drawerOpen = signal(false);
-  protected readonly layoutMode = signal<TreeLayoutMode>('landscape');
+  // Telas finas abrem em Retrato (a árvore desce, sem rolagem lateral).
+  protected readonly layoutMode = signal<TreeLayoutMode>(
+    typeof window !== 'undefined' && window.innerWidth <= 640 ? 'portrait' : 'landscape',
+  );
 
   protected readonly authors = computed(() => {
     const map = new Map<string, string>();

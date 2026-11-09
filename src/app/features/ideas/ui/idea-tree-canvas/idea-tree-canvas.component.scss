@@ -674,12 +674,20 @@
   .canvas__details {
     top: var(--space-2);
     left: var(--space-2);
-    width: min(176px, 50vw);
+    width: auto;
+    max-width: 46vw;
   }
 
   .canvas__details-toggle {
     padding: 8px 10px;
     font-size: var(--text-xs);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .canvas__details-toggle app-icon {
+    flex-shrink: 0;
   }
 
   .canvas__toolbar-wrap {
@@ -771,7 +779,7 @@
 
 @media (max-width: 400px) {
   .canvas__details {
-    width: min(140px, 52vw);
+    max-width: 52vw;
   }
 
   .canvas__toolbar-wrap {

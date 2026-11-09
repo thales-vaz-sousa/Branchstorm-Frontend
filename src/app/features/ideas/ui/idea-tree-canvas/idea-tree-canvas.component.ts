@@ -564,16 +564,31 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
       return;
     }
 
-    const scale = Math.min(
-      1.1,
-      Math.max(
-        0.2,
-        Math.min(
-          (rect.width - PADDING * 2) / Math.max(layout.width, 1),
-          (rect.height - PADDING * 2) / Math.max(layout.height, 1),
-        ),
-      ),
+    const fit = Math.min(
+      (rect.width - PADDING * 2) / Math.max(layout.width, 1),
+      (rect.height - PADDING * 2) / Math.max(layout.height, 1),
     );
+    const narrow = rect.width <= 640;
+
+    // Telas finas: nunca encolher a ponto de ilegível — abre no tamanho
+    // mínimo de leitura e centraliza na raiz (o resto se arrasta/pinça).
+    const scale = narrow
+      ? Math.min(1, Math.max(fit, 0.6))
+      : Math.min(1.1, Math.max(0.2, fit));
+
+    if (narrow) {
+      const root = layout.nodes.find((item) => item.depth === 0) ?? layout.nodes[0];
+      if (!root) {
+        return;
+      }
+      this.animateTo({
+        x: rect.width * 0.38 - root.cx * scale,
+        y: rect.height * 0.42 - root.cy * scale,
+        k: scale,
+      });
+      return;
+    }
+
     this.animateTo({
       x: (rect.width - layout.width * scale) / 2,
       y: (rect.height - layout.height * scale) / 2,
