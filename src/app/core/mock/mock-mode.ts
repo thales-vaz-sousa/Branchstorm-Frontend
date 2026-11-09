@@ -18,7 +18,7 @@ export const MOCK_KEYS: Readonly<Record<MockService, string>> = {
   feedback: 'bs.mock.feedback',
 };
 
-export const MOCK_DB_KEY = 'bs.mock.db.v2';
+export const MOCK_DB_KEY = 'bs.mock.db.v3';
 
 /** Produção sempre usa a API real; as flags só existem em desenvolvimento. */
 export function isMockEnabled(service: MockService): boolean {
