@@ -1,0 +1,143 @@
+<div class="banner">
+  <img
+    src="brand/wide.png"
+    [alt]="'about.bannerAlt' | translate"
+    width="1969"
+    height="414" />
+</div>
+
+<div class="trunk">
+  <section class="ramo ramo--wide">
+    <p class="ramo__tag">Branchstorm <span class="pill pill--outline">{{ 'about.badge' | translate }}</span></p>
+    <h1>{{ 'about.h1' | translate }}</h1>
+    <p class="ramo__lead">
+      {{ 'about.lead' | translate }}
+    </p>
+  </section>
+
+  <section class="ramo ramo--left">
+    <p class="ramo__tag">{{ 'about.s1.tag' | translate }}</p>
+    <h2>{{ 'about.s1.h2' | translate }}</h2>
+    <p>
+      {{ 'about.s1.p' | translate }}
+    </p>
+  </section>
+
+  <section class="ramo ramo--right">
+    <p class="ramo__tag">{{ 'about.s2.tag' | translate }}</p>
+    <h2>{{ 'about.s2.h2' | translate }}</h2>
+    <ul class="arv">
+      <li>
+        {{ 'about.s2.root' | translate }}
+        <ul>
+          <li>
+            {{ 'about.s2.a' | translate }}
+            <app-status-badge status="Selected" />
+            <ul>
+              <li>
+                {{ 'about.s2.a1' | translate }}
+                <app-status-badge status="Open" />
+              </li>
+            </ul>
+          </li>
+          <li class="arv__x">
+            {{ 'about.s2.b' | translate }}
+            <app-status-badge status="Discarded" />
+          </li>
+          <li class="arv__x">
+            {{ 'about.s2.c' | translate }}
+            <app-status-badge status="Discarded" />
+          </li>
+        </ul>
+      </li>
+    </ul>
+    <p class="ramo__note">{{ 'about.s2.note' | translate }}</p>
+    <ul class="arv">
+      <li>{{ 'about.s2.autor' | translate }}</li>
+      <li>{{ 'about.s2.colab' | translate }}</li>
+      <li>{{ 'about.s2.eval' | translate }}</li>
+    </ul>
+  </section>
+
+  <section class="ramo ramo--left">
+    <p class="ramo__tag">{{ 'about.s3.tag' | translate }}</p>
+    <h2>{{ 'about.s3.h2' | translate }}</h2>
+    <ul class="st">
+      <li><span class="pill">{{ 'about.s3.done' | translate }}</span>{{ 'about.s3.f1' | translate }}</li>
+      <li><span class="pill">{{ 'about.s3.done' | translate }}</span>{{ 'about.s3.f2' | translate }}</li>
+      <li><span class="pill">{{ 'about.s3.done' | translate }}</span>{{ 'about.s3.f3' | translate }}</li>
+      <li><span class="pill">{{ 'about.s3.done' | translate }}</span>{{ 'about.s3.f4' | translate }}</li>
+      <li><span class="pill">{{ 'about.s3.done' | translate }}</span>{{ 'about.s3.f5' | translate }}</li>
+      <li><span class="pill pill--outline">{{ 'about.s3.progress' | translate }}</span>{{ 'about.s3.f6' | translate }}</li>
+      <li><span class="pill pill--outline">{{ 'about.s3.progress' | translate }}</span>{{ 'about.s3.f7' | translate }}</li>
+    </ul>
+  </section>
+
+  <section class="ramo ramo--wide">
+    <p class="ramo__tag">{{ 'about.s4.tag' | translate }}</p>
+    <h2>{{ 'about.s4.h2' | translate }}</h2>
+    <p>
+      {{ 'about.s4.p' | translate }}
+    </p>
+    <ul class="arv">
+      <li>{{ 'about.s4.u' | translate }}</li>
+      <li>{{ 'about.s4.t' | translate }}</li>
+      <li>{{ 'about.s4.i' | translate }}</li>
+      <li>{{ 'about.s4.h' | translate }}</li>
+      <li>{{ 'about.s4.f' | translate }}</li>
+    </ul>
+    <p class="ramo__note">{{ 'about.s4.note' | translate }}</p>
+  </section>
+
+  <section class="ramo ramo--right">
+    <p class="ramo__tag">{{ 'about.s5.tag' | translate }}</p>
+    <h2>{{ 'about.s5.h2' | translate }}</h2>
+    <ul class="st">
+      <li><span class="pill">{{ 'about.s5.back' | translate }}</span>{{ 'about.s5.backDesc' | translate }}</li>
+      <li><span class="pill">{{ 'about.s5.front' | translate }}</span>{{ 'about.s5.frontDesc' | translate }}</li>
+      <li><span class="pill">{{ 'about.s5.infra' | translate }}</span>{{ 'about.s5.infraDesc' | translate }}</li>
+    </ul>
+  </section>
+
+  <section class="ramo ramo--wide">
+    <p class="ramo__tag">{{ 'about.s6.tag' | translate }}</p>
+    <h2>{{ 'about.s6.h2' | translate }}</h2>
+    <div class="metro">
+      <svg
+        viewBox="0 0 900 190"
+        role="img"
+        [attr.aria-label]="'about.s6.h2' | translate">
+        <path class="ln" d="M50 90H560" />
+        <path class="lb" d="M560 90C600 90 610 40 650 40H700" />
+        <path class="lb" d="M560 90H700" />
+        <path class="lb" d="M560 90C600 90 610 140 650 140H700" />
+        <circle class="sd" cx="50" cy="90" r="11" />
+        <circle class="sr" cx="190" cy="90" r="11" />
+        <circle class="si" cx="190" cy="90" r="4.5" />
+        <circle class="sr" cx="330" cy="90" r="11" />
+        <circle class="sr" cx="450" cy="90" r="11" />
+        <circle class="sd" cx="560" cy="90" r="15" />
+        <text x="50" y="48" text-anchor="middle">{{ 'about.s6.readme' | translate }}</text>
+        <text x="190" y="122" text-anchor="middle">{{ 'about.s6.services' | translate }}</text>
+        <text x="330" y="48" text-anchor="middle">{{ 'about.s6.gateway' | translate }}</text>
+        <text x="450" y="122" text-anchor="middle">{{ 'about.s6.deploy' | translate }}</text>
+        <text x="560" y="130" text-anchor="middle">{{ 'about.s6.delivery' | translate }}</text>
+        <text x="712" y="44" dominant-baseline="middle" class="m">{{ 'about.road.ia' | translate }}</text>
+        <text x="712" y="94" dominant-baseline="middle" class="m">{{ 'about.road.perspectives' | translate }}</text>
+        <text x="712" y="144" dominant-baseline="middle" class="m">{{ 'about.road.battle' | translate }}</text>
+      </svg>
+    </div>
+    <p class="leg">
+      {{ 'about.s6.legend' | translate }}
+    </p>
+  </section>
+
+  <section class="ramo ramo--right">
+    <p class="ramo__tag">{{ 'about.s7.tag' | translate }}</p>
+    <h2>{{ 'about.s7.h2' | translate }}</h2>
+    <p class="ramo__lead">{{ 'about.s7.names' | translate }}</p>
+    <p>
+      {{ 'about.s7.course' | translate }}
+    </p>
+  </section>
+</div>

@@ -1,0 +1,132 @@
+<div class="shell">
+  <div class="shell__top">
+    <header class="shell__header">
+      <div class="shell__bar">
+        <a class="brand" routerLink="/equipes" aria-label="Branchstorm, ir para equipes">
+          <img class="brand__mark" [src]="brandIcon()" alt="" width="32" height="32" />
+          <span class="brand__name">Branchstorm</span>
+        </a>
+
+        <nav class="shell__nav" aria-label="Navegação principal">
+          <a
+            class="shell__link"
+            routerLink="/equipes"
+            routerLinkActive="shell__link--active"
+            ariaCurrentWhenActive="page">
+            {{ 'nav.teams' | translate }}
+          </a>
+          <a class="shell__link" [href]="environment.docsUrl" target="_blank" rel="noopener">
+            {{ 'nav.docs' | translate }}
+          </a>
+          <a
+            class="shell__link"
+            routerLink="/sobre"
+            routerLinkActive="shell__link--active"
+            ariaCurrentWhenActive="page">
+            {{ 'nav.about' | translate }}
+          </a>
+        </nav>
+
+        <div class="shell__actions">
+          @if (demoMode) {
+            <app-banner tone="demo" class="shell__demo-bar">
+              {{ 'shell.demo' | translate }}
+            </app-banner>
+          }
+          <button
+            class="shell__user"
+            type="button"
+            [cdkMenuTriggerFor]="langMenu"
+            [attr.aria-label]="'shell.language' | translate"
+            aria-haspopup="menu">
+            <app-icon name="translate" [size]="17" />
+          </button>
+          <ng-template #langMenu>
+            <div class="bs-menu" cdkMenu>
+              <div class="bs-menu__label">{{ 'shell.language' | translate }}</div>
+              @for (option of i18n.langs; track option.code) {
+                <button
+                  class="bs-menu__item"
+                  type="button"
+                  cdkMenuItem
+                  [attr.aria-checked]="i18n.lang() === option.code"
+                  (click)="setLang(option.code)">
+                  {{ option.nativeName }}
+                  @if (i18n.lang() === option.code) {
+                    <app-icon name="check" [size]="14" />
+                  }
+                </button>
+              }
+            </div>
+          </ng-template>
+          <button
+            class="shell__user"
+            type="button"
+            [cdkMenuTriggerFor]="userMenu"
+            [attr.aria-label]="'shell.userMenu' | translate">
+            <span class="avatar">{{ session.initials() }}</span>
+            <app-icon name="chevron" [rotate]="90" [size]="14" />
+          </button>
+        </div>
+      </div>
+
+      @if (loading.isLoading()) {
+        <div
+          class="shell__progress"
+          role="progressbar"
+          [attr.aria-label]="'shell.loading' | translate">
+          <span></span>
+        </div>
+      }
+
+      @if (loading.coldStart()) {
+        <app-banner tone="info" class="shell__demo">
+          {{ 'shell.coldStart' | translate }}
+        </app-banner>
+      }
+    </header>
+  </div>
+
+  <main class="shell__main" [class.shell__main--tree]="isTreeRoute()">
+    <router-outlet />
+  </main>
+
+  @if (!isTreeRoute()) {
+    <footer class="shell__footer">
+      <div class="shell__footer-inner">
+        <img
+          class="shell__footer-logo"
+          src="brand/capybara-logo.png"
+          alt=""
+          width="20"
+          height="20" />
+        <span>{{ 'footer.brand' | translate }}</span>
+      </div>
+    </footer>
+  }
+</div>
+
+<ng-template #userMenu>
+  <div class="bs-menu" cdkMenu>
+    <div class="bs-menu__label">{{ session.user()?.name }}</div>
+    <button class="bs-menu__item" type="button" cdkMenuItem (click)="setTheme('light')">
+      {{ 'theme.light' | translate }}
+    </button>
+    <button class="bs-menu__item" type="button" cdkMenuItem (click)="setTheme('dark')">
+      {{ 'theme.dark' | translate }}
+    </button>
+    <button class="bs-menu__item" type="button" cdkMenuItem (click)="setTheme('system')">
+      {{ 'theme.system' | translate }}
+    </button>
+    <div class="bs-menu__divider" role="separator"></div>
+    <button
+      class="bs-menu__item bs-menu__item--danger"
+      type="button"
+      cdkMenuItem
+      (click)="logout()">
+      {{ 'user.logout' | translate }}
+    </button>
+  </div>
+</ng-template>
+
+<app-toast-stack />

@@ -1,0 +1,143 @@
+<div class="login">
+  <aside class="login__brand">
+    <img class="login__wide" src="brand/wide.png" alt="Branchstorm" width="1969" height="414" />
+    <h1>{{ 'login.brand.h1' | translate }}</h1>
+    <p class="login__lead">
+      {{ 'login.brand.lead' | translate }}
+    </p>
+
+    <ul class="login__list">
+      <li><app-icon name="check" [size]="16" /> {{ 'login.f1' | translate }}</li>
+      <li><app-icon name="check" [size]="16" /> {{ 'login.f2' | translate }}</li>
+      <li><app-icon name="check" [size]="16" /> {{ 'login.f3' | translate }}</li>
+      <li><app-icon name="check" [size]="16" /> {{ 'login.f4' | translate }}</li>
+    </ul>
+  </aside>
+
+  <main class="login__panel">
+    @if (demoMode) {
+      <div class="login__demo">
+        <app-banner tone="demo">{{ 'shell.demo' | translate }}</app-banner>
+      </div>
+    }
+
+    <div class="login__form">
+      <span class="bs-eyebrow">{{ 'login.eyebrow' | translate }}</span>
+      <h2>{{ 'login.title' | translate }}</h2>
+      <p class="login__hint">
+        {{ 'login.hint' | translate }}
+      </p>
+
+      @if (loading()) {
+        <div class="login__loading">
+          <app-spinner [size]="20" />
+          <span>{{ 'login.loading' | translate }}</span>
+        </div>
+      } @else if (error()) {
+        <app-banner tone="error" [title]="'login.bannerError' | translate">
+          {{ error()?.message }}
+          <button
+            bannerAction
+            appButton
+            variant="outline"
+            size="sm"
+            type="button"
+            (click)="loadUsers()">
+            {{ 'common.retry' | translate }}
+          </button>
+        </app-banner>
+      } @else if (usersList().length === 0) {
+        <app-empty-state
+          icon="message"
+          [title]="'login.empty.title' | translate"
+          [description]="'login.empty.desc' | translate" />
+      } @else {
+        <div class="people" role="radiogroup" [attr.aria-label]="'login.people' | translate">
+          @for (user of usersList(); track user.code) {
+            <label class="person" [class.person--selected]="selectedCode() === user.code">
+              <input
+                class="person__input"
+                type="radio"
+                name="person"
+                [value]="user.code"
+                [checked]="selectedCode() === user.code"
+                (change)="selectUser(user.code)" />
+              <span class="avatar">{{ user.name.charAt(0).toUpperCase() }}</span>
+              <span class="person__copy">
+                <span class="person__name">{{ user.name }}</span>
+                <span class="person__email">{{ user.email }}</span>
+              </span>
+            </label>
+          }
+        </div>
+      }
+
+      <div class="login__actions">
+        <button
+          appButton
+          variant="filled"
+          type="button"
+          [disabled]="!selectedUser() || loading()"
+          (click)="enter()">
+          {{ 'login.enter' | translate }}
+        </button>
+        <button appButton variant="text" type="button" (click)="toggleCreate()">
+          {{ (showCreate() ? 'login.closeCreate' : 'login.openCreate') | translate }}
+        </button>
+      </div>
+
+      @if (showCreate()) {
+        <form class="create" [formGroup]="createForm" (ngSubmit)="createUser()">
+          <app-field
+            controlId="create-name"
+            [label]="'login.nameLabel' | translate"
+            required="true"
+            [hint]="'login.nameHint' | translate"
+            [error]="
+              createForm.controls.name.touched && createForm.controls.name.invalid
+                ? ('login.nameError' | translate)
+                : ''
+            ">
+            <input
+              id="create-name"
+              class="bs-input"
+              type="text"
+              formControlName="name"
+              autocomplete="name" />
+          </app-field>
+
+          <app-field
+            controlId="create-email"
+            [label]="'login.emailLabel' | translate"
+            required="true"
+            [error]="
+              createForm.controls.email.touched && createForm.controls.email.invalid
+                ? ('login.emailError' | translate)
+                : ''
+            ">
+            <input
+              id="create-email"
+              class="bs-input"
+              type="email"
+              formControlName="email"
+              autocomplete="email" />
+          </app-field>
+
+          @if (createError()) {
+            <p class="create__error">{{ createError() }}</p>
+          }
+
+          <button appButton variant="outline" type="submit" [loading]="creating()">
+            {{ 'login.create' | translate }}
+          </button>
+        </form>
+      }
+    </div>
+
+    <p class="login__footer">
+      <a [href]="environment.docsUrl" target="_blank" rel="noopener">{{
+        'nav.docs' | translate
+      }}</a>
+    </p>
+  </main>
+</div>
