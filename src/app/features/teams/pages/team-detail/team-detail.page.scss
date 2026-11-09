@@ -53,8 +53,8 @@
 }
 
 .problems {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
   gap: var(--space-3);
   margin: 0;
   padding: 0;
@@ -64,12 +64,14 @@
 .problem {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-5);
+  height: 100%;
+  gap: var(--space-2);
+  padding: var(--space-4);
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
   background: var(--card);
   color: inherit;
+  text-decoration: none;
   transition:
     border-color var(--duration-fast) var(--ease),
     background-color var(--duration-fast) var(--ease);
@@ -84,12 +86,28 @@
 .problem__head {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.problem__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-2);
 }
 
 .problem__arrow {
-  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
   color: var(--muted);
+  flex-shrink: 0;
 }
 
 .problem:hover .problem__arrow {
@@ -219,5 +237,50 @@
 @media (max-width: 960px) {
   .detail {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .detail {
+    gap: var(--space-5);
+  }
+
+  /* cartões em coluna única, título menor e respiro reduzido */
+  .problems {
+    grid-template-columns: 1fr;
+  }
+
+  .problem {
+    padding: var(--space-4);
+  }
+
+  .problem__title {
+    font-size: var(--text-base);
+    overflow-wrap: anywhere;
+  }
+
+  .section-head {
+    flex-wrap: wrap;
+  }
+
+  /* membro: papel e seletor quebram para a linha de baixo em telas finas */
+  .member {
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+  }
+
+  .member__role {
+    flex: 1 1 100%;
+    margin-left: 0;
+    justify-content: space-between;
+  }
+
+  .member__select {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .team-save {
+    flex-wrap: wrap;
   }
 }

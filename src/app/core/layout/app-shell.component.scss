@@ -226,3 +226,17 @@
     padding-top: var(--space-5);
   }
 }
+
+@media (max-width: 400px) {
+  .shell__bar {
+    gap: var(--space-2);
+  }
+
+  .shell__actions {
+    gap: var(--space-1);
+  }
+
+  .shell__main {
+    padding-inline: var(--space-3);
+  }
+}

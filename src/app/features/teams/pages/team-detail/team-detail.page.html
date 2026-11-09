@@ -70,15 +70,17 @@
                 <div class="problem__head">
                   <app-status-badge [status]="problem.status" />
                   <app-validation-badge [validation]="problem.validation" />
-                  <span class="problem__arrow" aria-hidden="true">
-                    <app-icon name="arrow" [size]="16" />
-                  </span>
                 </div>
                 <h3 class="problem__title">{{ problem.title }}</h3>
                 @if (problem.description) {
                   <p class="problem__description">{{ problem.description }}</p>
                 }
-                <span class="problem__date">{{ problem.creationDate | relativeDate }}</span>
+                <div class="problem__foot">
+                  <span class="problem__date">{{ problem.creationDate | relativeDate }}</span>
+                  <span class="problem__arrow" aria-hidden="true">
+                    <app-icon name="arrow" [size]="16" />
+                  </span>
+                </div>
               </a>
             </li>
           }

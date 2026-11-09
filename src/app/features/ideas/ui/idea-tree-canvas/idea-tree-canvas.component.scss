@@ -669,24 +669,75 @@
 }
 
 @media (max-width: 640px) {
+  /* Telas finas: detalhes compactos no canto, toolbar em linha própria
+     logo abaixo (nunca sobreposta aos detalhes) e rolável na horizontal. */
   .canvas__details {
     top: var(--space-2);
     left: var(--space-2);
-    width: 200px;
+    width: min(176px, 50vw);
   }
 
-  /* toolbar em 2 linhas (como o FamilySearch no tablet) */
+  .canvas__details-toggle {
+    padding: 8px 10px;
+    font-size: var(--text-xs);
+  }
+
   .canvas__toolbar-wrap {
-    top: var(--space-2);
+    top: 52px;
     right: var(--space-2);
-    left: auto;
+    left: var(--space-2);
     transform: none;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
   }
 
   .canvas__toolbar {
-    flex-wrap: wrap;
-    justify-content: center;
-    max-width: calc(100vw - 240px);
+    pointer-events: auto;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 3px 4px;
+  }
+
+  .canvas__toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .canvas__layout-btn {
+    padding: 4px 6px;
+    flex-shrink: 0;
+  }
+
+  .canvas__icon-btn {
+    min-width: 28px;
+    flex-shrink: 0;
+  }
+
+  /* Cards menores e mais compactos (o tamanho em px vem do layout) */
+  .tree-node {
+    gap: 1px;
+    padding: 8px 10px 6px 12px;
+    border-left-width: 2px;
+  }
+
+  .tree-node__title {
+    font-size: 13px;
+  }
+
+  .tree-node__meta {
+    font-size: 10px;
+  }
+
+  .tree-node__type {
+    font-size: 9px;
+  }
+
+  .canvas__minimap-svg {
+    width: 120px;
+    height: 120px;
   }
 
   /* configurações viram bottom sheet (Opções, estilo FamilySearch) */
@@ -697,6 +748,8 @@
     bottom: 0;
     top: auto;
     width: auto;
+    max-height: 70dvh;
+    overflow-y: auto;
     border-radius: 12px 12px 0 0;
     border-bottom: 0;
     z-index: 50;
@@ -713,5 +766,21 @@
     border-radius: 99px;
     background: var(--muted);
     transform: translateX(-50%);
+  }
+}
+
+@media (max-width: 400px) {
+  .canvas__details {
+    width: min(140px, 52vw);
+  }
+
+  .canvas__toolbar-wrap {
+    top: 46px;
+  }
+
+  /* economiza espaço: o nome do layout e o % de zoom saem da barra */
+  .canvas__layout-label,
+  .canvas__zoom {
+    display: none;
   }
 }

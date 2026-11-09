@@ -138,6 +138,12 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
   /** Detalhes da árvore começam fechados por padrão. */
   protected readonly showDetails = signal(false);
   protected readonly showMinimap = signal(false);
+  /** Largura do viewport (cards menores em telas finas — mobile). */
+  protected readonly viewportWidth = signal<number>(typeof window === 'undefined' ? 1024 : window.innerWidth);
+
+  /** Tamanho do card: 250×112 no desktop, 180×96 em telas finas. */
+  protected readonly nodeW = computed(() => (this.viewportWidth() <= 640 ? 180 : NODE_WIDTH));
+  protected readonly nodeH = computed(() => (this.viewportWidth() <= 640 ? 96 : NODE_HEIGHT));
 
   /** Minimapa: pontos dos nós + retângulo do viewport no espaço do layout. */
   protected readonly minimapViewport = computed(() => {
@@ -197,11 +203,13 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
               : undefined,
         )([...visible]);
 
+      const w = this.nodeW();
+      const h = this.nodeH();
       const treeLayout = d3Tree<LinkResult>().nodeSize(
         mode === 'portrait'
           ? // retrato: irmãos lado a lado (precisa do vão da LARGURA do card)
-            [NODE_WIDTH + SIBLING_GAP, NODE_HEIGHT + LEVEL_GAP]
-          : [NODE_HEIGHT + SIBLING_GAP, NODE_WIDTH + LEVEL_GAP],
+            [w + SIBLING_GAP, h + LEVEL_GAP]
+          : [h + SIBLING_GAP, w + LEVEL_GAP],
       );
       const root = treeLayout(hierarchy);
       const descendants = root.descendants();
@@ -215,13 +223,13 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
             node: item.data,
             x: PADDING + (item.x - minX),
             y: PADDING + item.y,
-            w: NODE_WIDTH,
-            h: NODE_HEIGHT,
+            w,
+            h,
             depth: item.depth,
             childrenCount: this.childCounts().get(item.data.code) ?? 0,
             collapsed: this.collapsedCodes().has(item.data.code),
-            cx: PADDING + (item.x - minX) + NODE_WIDTH / 2,
-            cy: PADDING + item.y + NODE_HEIGHT / 2,
+            cx: PADDING + (item.x - minX) + w / 2,
+            cy: PADDING + item.y + h / 2,
           };
         }
 
@@ -229,13 +237,13 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
           node: item.data,
           x: PADDING + item.y,
           y: PADDING + (item.x - minX),
-          w: NODE_WIDTH,
-          h: NODE_HEIGHT,
+          w,
+          h,
           depth: item.depth,
           childrenCount: this.childCounts().get(item.data.code) ?? 0,
           collapsed: this.collapsedCodes().has(item.data.code),
-          cx: PADDING + item.y + NODE_WIDTH / 2,
-          cy: PADDING + (item.x - minX) + NODE_HEIGHT / 2,
+          cx: PADDING + item.y + w / 2,
+          cy: PADDING + (item.x - minX) + h / 2,
         };
       });
 
@@ -278,17 +286,17 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
       let height: number;
 
       if (mode === 'portrait') {
-        width = PADDING * 2 + (maxX - minX) + NODE_WIDTH;
-        height = PADDING * 2 + maxDepth * (NODE_HEIGHT + LEVEL_GAP) + NODE_HEIGHT;
+        width = PADDING * 2 + (maxX - minX) + w;
+        height = PADDING * 2 + maxDepth * (h + LEVEL_GAP) + h;
       } else {
-        width = PADDING * 2 + maxDepth * (NODE_WIDTH + LEVEL_GAP) + NODE_WIDTH;
-        height = PADDING * 2 + (maxX - minX) + NODE_HEIGHT;
+        width = PADDING * 2 + maxDepth * (w + LEVEL_GAP) + w;
+        height = PADDING * 2 + (maxX - minX) + h;
       }
 
       const ghost = this.buildGhost(positioned, mode);
       if (ghost) {
-        width = Math.max(width, ghost.slot.x + NODE_WIDTH + PADDING);
-        height = Math.max(height, ghost.slot.y + NODE_HEIGHT + PADDING);
+        width = Math.max(width, ghost.slot.x + w + PADDING);
+        height = Math.max(height, ghost.slot.y + h + PADDING);
       }
 
       return {
@@ -366,6 +374,9 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
+    this.onResize();
+    window.addEventListener('resize', this.onResize);
+    this.destroyRef.onDestroy(() => window.removeEventListener('resize', this.onResize));
     this.setupZoom();
     this.observeFullscreen();
 
@@ -373,6 +384,10 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
       requestAnimationFrame(() => this.center());
     }
   }
+
+  private readonly onResize = (): void => {
+    this.viewportWidth.set(window.innerWidth);
+  };
 
   protected typeLabel(node: LinkResult): string {
     return linkTypeLabel(node.type, this.i18n.lang());
@@ -713,15 +728,15 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
           : anchor.x;
       const y = anchor.y + anchor.h + LEVEL_GAP;
       const midY = (anchor.y + anchor.h + y) / 2;
-      const path = `M ${anchor.cx} ${anchor.y + anchor.h} L ${anchor.cx} ${midY} L ${x + NODE_WIDTH / 2} ${midY} L ${x + NODE_WIDTH / 2} ${y}`;
+      const path = `M ${anchor.cx} ${anchor.y + anchor.h} L ${anchor.cx} ${midY} L ${x + anchor.w / 2} ${midY} L ${x + anchor.w / 2} ${y}`;
       return {
         slot: {
           fatherCode: anchor.node.code,
           x,
           y,
           label,
-          cx: x + NODE_WIDTH / 2,
-          cy: y + NODE_HEIGHT / 2,
+          cx: x + anchor.w / 2,
+          cy: y + anchor.h / 2,
         },
         path,
       };
@@ -734,15 +749,15 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
         ? Math.max(...children.map((item) => item.y + item.h)) + SIBLING_GAP
         : anchor.y;
     const midX = (anchor.x + anchor.w + x) / 2;
-    const path = `M ${anchor.x + anchor.w} ${anchor.cy} L ${midX} ${anchor.cy} L ${midX} ${y + NODE_HEIGHT / 2} L ${x} ${y + NODE_HEIGHT / 2}`;
+    const path = `M ${anchor.x + anchor.w} ${anchor.cy} L ${midX} ${anchor.cy} L ${midX} ${y + anchor.h / 2} L ${x} ${y + anchor.h / 2}`;
     return {
       slot: {
         fatherCode: anchor.node.code,
         x,
         y,
         label,
-        cx: x + NODE_WIDTH / 2,
-        cy: y + NODE_HEIGHT / 2,
+        cx: x + anchor.w / 2,
+        cy: y + anchor.h / 2,
       },
       path,
     };

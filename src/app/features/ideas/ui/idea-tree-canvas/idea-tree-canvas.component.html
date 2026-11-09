@@ -356,8 +356,8 @@
           [class.tree-node--portrait]="isPortrait()"
           [style.left.px]="ghost.x"
           [style.top.px]="ghost.y"
-          [style.width.px]="250"
-          [style.height.px]="112"
+          [style.width.px]="nodeW()"
+          [style.height.px]="nodeH()"
           [attr.aria-label]="ghost.label + ' abaixo de ' + ghost.fatherCode"
           (click)="requestChild($event, ghost.fatherCode)">
           <span class="tree-node__ghost-label">{{ ghost.label }}</span>
