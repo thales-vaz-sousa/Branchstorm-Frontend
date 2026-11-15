@@ -347,9 +347,52 @@ describe('IdeaTreeCanvas pan/zoom', () => {
 
     expect(ys).toHaveLength(4);
     for (let i = 1; i < ys.length; i += 1) {
-      // card tem 112px de altura; irmãos precisam de >= 140px (28px de vão)
-      expect(ys[i]! - ys[i - 1]!).toBeGreaterThanOrEqual(140);
+      // card tem 148px de altura; irmãos precisam de >= 176px (148 + 28 de vão)
+      expect(ys[i]! - ys[i - 1]!).toBeGreaterThanOrEqual(184);
     }
+  });
+
+  it('keeps a three-level tree from overlapping cards (fixed card height)', async () => {
+    const deep = [
+      node('ROOT-1', null, 'Problema raiz'),
+      node('SOL-1', 'ROOT-1', 'Solução um'),
+      node('VER-1', 'SOL-1', 'Versão um'),
+    ];
+    fixture.componentRef.setInput('nodes', deep);
+    fixture.componentRef.setInput(
+      'childrenByFather',
+      new Map([
+        ['ROOT-1', [deep[1]!] as readonly LinkResult[]],
+        ['SOL-1', [deep[2]!] as readonly LinkResult[]],
+      ]),
+    );
+    fixture.componentRef.setInput(
+      'childCounts',
+      new Map([
+        ['ROOT-1', 1],
+        ['SOL-1', 1],
+      ]),
+    );
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const layout = (
+      component as unknown as {
+        layout: () => {
+          nodes: readonly { y: number; h: number; x: number; w: number; node: { code: string } }[];
+        };
+      }
+    ).layout();
+
+    const byCode = new Map(layout.nodes.map((item) => [item.node.code, item]));
+    const root = byCode.get('ROOT-1')!;
+    const solution = byCode.get('SOL-1')!;
+    const version = byCode.get('VER-1')!;
+
+    // Cards com altura/largura fixas não podem se sobrepor (filho começa depois do fim do pai).
+    expect(version.x).toBeGreaterThanOrEqual(solution.x + solution.w);
+    expect(solution.x).toBeGreaterThanOrEqual(root.x + root.w);
   });
 
   it('spaces siblings without overlap in portrait (cards 250px wide)', async () => {

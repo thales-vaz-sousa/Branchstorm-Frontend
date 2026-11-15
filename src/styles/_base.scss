@@ -238,10 +238,10 @@ svg {
   transition: opacity var(--duration) var(--ease);
 }
 
-/* Diálogos (forms) como bottom sheet: entram de baixo para cima */
+/* Diálogos (forms): centralizados no desktop; bottom sheet no mobile */
 .bs-dialog-panel {
   display: flex !important;
-  align-items: flex-end !important;
+  align-items: center !important;
   justify-content: center !important;
   width: 100vw !important;
   max-width: none !important;
@@ -249,12 +249,18 @@ svg {
   height: 100dvh !important;
   max-height: none !important;
   margin: 0 !important;
-  padding: 0 !important;
+  padding: var(--space-4) !important;
   top: 0 !important;
   left: 0 !important;
   transform: none !important;
 }
 
+@media (max-width: 640px) {
+  .bs-dialog-panel {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+}
 /* Movimento -------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   *,

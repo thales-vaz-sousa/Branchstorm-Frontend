@@ -21,10 +21,10 @@ import { BS_MENU } from '@shared/ui/menu/menu';
 import { CdkMenuTrigger } from '@angular/cdk/menu';
 import type { LinkResult } from '@shared/models/link.model';
 import { findPathToNode } from '@shared/utils/tree.util';
-import { linkTypeLabel, linkValidationLabel } from '@shared/utils/enum.util';
+import { linkTypeLabel } from '@shared/utils/enum.util';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { I18nService } from '@core/i18n/i18n.service';
-import { formatDate } from '@shared/utils/date.util';
+import { formatShortDate } from '@shared/utils/date.util';
 import { DialogService } from '@shared/ui/dialog/dialog.service';
 import { TreeInfoDialogComponent, type TreeInfoDialogData } from './tree-info-dialog.component';
 
@@ -38,10 +38,11 @@ export interface TreeStatsView {
   readonly final: number;
 }
 
-const NODE_WIDTH = 250;
-const NODE_HEIGHT = 112;
-const LEVEL_GAP = 80;
-const SIBLING_GAP = 28;
+/** Medidas únicas do card da árvore — fonte única (CSS via --card-*, d3 via nodeSize). */
+const CARD_W = 250;
+const CARD_H = 156;
+const GAP_X = 28;
+const GAP_Y = 80;
 const PADDING = 48;
 
 interface PositionedNode {
@@ -153,9 +154,10 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
     typeof window === 'undefined' ? 1024 : window.innerWidth,
   );
 
-  /** Tamanho do card: 250×112 no desktop, 180×96 em telas finas. */
-  protected readonly nodeW = computed(() => (this.viewportWidth() <= 640 ? 180 : NODE_WIDTH));
-  protected readonly nodeH = computed(() => (this.viewportWidth() <= 640 ? 96 : NODE_HEIGHT));
+  /** Tamanho do card: 180×148 em telas finas, 250×148 no desktop (largura ×
+      altura que comporta 2 linhas de título + autor + pílula). */
+  protected readonly nodeW = computed(() => (this.viewportWidth() <= 640 ? 180 : CARD_W));
+  protected readonly nodeH = computed(() => CARD_H);
 
   /** Minimapa: pontos dos nós + retângulo do viewport no espaço do layout. */
   protected readonly minimapViewport = computed(() => {
@@ -217,12 +219,11 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
 
       const w = this.nodeW();
       const h = this.nodeH();
-      const treeLayout = d3Tree<LinkResult>().nodeSize(
-        mode === 'portrait'
-          ? // retrato: irmãos lado a lado (precisa do vão da LARGURA do card)
-            [w + SIBLING_GAP, h + LEVEL_GAP]
-          : [h + SIBLING_GAP, w + LEVEL_GAP],
-      );
+      const treeLayout = d3Tree<LinkResult>()
+        .nodeSize(
+          mode === 'portrait' ? [CARD_W + GAP_X, CARD_H + GAP_Y] : [CARD_H + GAP_X, CARD_W + GAP_Y],
+        )
+        .separation((a, b) => (a.parent === b.parent ? 1 : 1.4));
       const root = treeLayout(hierarchy);
       const descendants = root.descendants();
       const minX = Math.min(...descendants.map((item) => item.x));
@@ -299,9 +300,9 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
 
       if (mode === 'portrait') {
         width = PADDING * 2 + (maxX - minX) + w;
-        height = PADDING * 2 + maxDepth * (h + LEVEL_GAP) + h;
+        height = PADDING * 2 + maxDepth * (h + GAP_Y) + h;
       } else {
-        width = PADDING * 2 + maxDepth * (w + LEVEL_GAP) + w;
+        width = PADDING * 2 + maxDepth * (w + GAP_Y) + w;
         height = PADDING * 2 + (maxX - minX) + h;
       }
 
@@ -404,8 +405,11 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
     return linkTypeLabel(node.type, this.i18n.lang());
   }
 
-  protected validationLabel(node: LinkResult): string {
-    return linkValidationLabel(node.validation, this.i18n.lang());
+  /** Validação no card: "✓ Hipótese validada" (--tink) ou "Hipótese refutada" (--danger). */
+  protected validationHint(node: LinkResult): string {
+    return node.validation === 'Validated'
+      ? this.i18n.t('validation.validatedHint')
+      : this.i18n.t('validation.refutedHint');
   }
 
   protected readonly selectedNode = computed(
@@ -445,7 +449,7 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
   }
 
   protected shortDate(value: string): string {
-    return formatDate(value);
+    return formatShortDate(value);
   }
 
   /** ⓘ Detalhes: no mobile abre como sessão (diálogo em cheio), como as demais;
@@ -658,11 +662,19 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
       // (piso de leitura de 0.6) e centraliza na horizontal — nada de sobra
       // de um lado só. A raiz fica no terço superior; descendentes correm
       // para baixo (rolagem/pinça para o resto).
-      const widthFit = (rect.width - 32) / Math.max(layout.width, 1);
+      // Mobile: mantém piso de leitura (0.6) e ancora a raiz à esquerda com
+      // respiro quando a árvore não cabe na largura, evitando que a raiz fique
+      // deslocada à direita e os filhos sejam cortados na borda direita.
+      // Se couber, centraliza horizontalmente.
+      const leftPad = 16;
+      const widthFit = (rect.width - leftPad * 2) / Math.max(layout.width, 1);
       const scale = Math.min(1, Math.max(widthFit, 0.6));
+      const scaledW = layout.width * scale;
+      const x =
+        scaledW <= rect.width - leftPad * 2 ? (rect.width - scaledW) / 2 : leftPad - root.x * scale;
 
       this.animateTo({
-        x: (rect.width - layout.width * scale) / 2,
+        x,
         y: rect.height * 0.3 - root.cy * scale,
         k: scale,
       });

@@ -21,6 +21,7 @@ import { BrandLoaderComponent } from '@shared/ui/brand-loader/brand-loader.compo
 import { SpinnerComponent } from '@shared/ui/spinner/spinner.component';
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
 import { ValidationBadgeComponent } from '@shared/ui/validation-badge/validation-badge.component';
+import { TooltipDirective } from '@shared/ui/tooltip/tooltip.directive';
 import { DialogService } from '@shared/ui/dialog/dialog.service';
 import { DateTimePipe } from '@shared/pipes/date-time.pipe';
 import { NotificationService } from '@core/ui/notification.service';
@@ -55,6 +56,7 @@ import { TEAM_ROLE_NAMES, roleDescription, roleLabel, teamRoleName } from '@shar
     SpinnerComponent,
     StatusBadgeComponent,
     ValidationBadgeComponent,
+    TooltipDirective,
     DateTimePipe,
     TranslatePipe,
   ],
@@ -91,6 +93,30 @@ export class TeamDetailPage {
   protected readonly creatingProblem = signal(false);
   protected readonly selectedUserCode = signal<string | null>(null);
   protected readonly selectedRole = signal<TeamMemberRole>(TeamMemberRole.Collaborator);
+
+  /** Busca e filtro rápido da lista de problemas (coluna principal). */
+  protected readonly problemQuery = signal('');
+  protected readonly problemStatusFilter = signal<'all' | 'Open' | 'Selected'>('all');
+  protected readonly filteredProblems = computed(() => {
+    const query = this.problemQuery().trim().toLowerCase();
+    const status = this.problemStatusFilter();
+
+    return this.problems().filter((problem) => {
+      if (status !== 'all' && problem.status !== status) {
+        return false;
+      }
+
+      if (!query) {
+        return true;
+      }
+
+      const haystack = `${problem.title} ${problem.description ?? ''}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  });
+  protected readonly hasProblemFilters = computed(
+    () => this.problemQuery().trim().length > 0 || this.problemStatusFilter() !== 'all',
+  );
 
   /** Sessão de ajustes (nome + membros) no mobile (≤960px): abre pelo botão
       ⚙ ao lado do título; no desktop a coluna lateral continua no lugar. */
@@ -255,6 +281,10 @@ export class TeamDetailPage {
     }
   }
 
+  protected isOwner(role: number): boolean {
+    return role === TeamMemberRole.Owner;
+  }
+
   protected memberName(code: string | null): string {
     if (!code) {
       return this.i18n.t('canvas.authorFallback');
@@ -267,12 +297,39 @@ export class TeamDetailPage {
     return this.usersByCode().get(code)?.email ?? '';
   }
 
+  protected memberInitials(code: string): string {
+    const name = this.memberName(code).trim();
+    if (!name) {
+      return '?';
+    }
+
+    const parts = name.split(/\s+/).filter(Boolean);
+    const first = parts[0]?.charAt(0) ?? '';
+    const second =
+      parts.length > 1 ? parts[parts.length - 1]!.charAt(0) : (parts[0]?.charAt(1) ?? '');
+
+    return (first + second).toUpperCase() || '?';
+  }
+
   protected onUserSelected(code: string): void {
     this.selectedUserCode.set(code || null);
   }
 
   protected onRoleSelected(value: string): void {
     this.selectedRole.set(this.roleValue(value as TeamMemberRoleName));
+  }
+
+  protected setProblemQuery(value: string): void {
+    this.problemQuery.set(value);
+  }
+
+  protected setProblemStatusFilter(filter: 'all' | 'Open' | 'Selected'): void {
+    this.problemStatusFilter.set(filter);
+  }
+
+  protected clearProblemFilters(): void {
+    this.problemQuery.set('');
+    this.problemStatusFilter.set('all');
   }
 
   protected addMember(): void {

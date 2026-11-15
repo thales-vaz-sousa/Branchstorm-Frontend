@@ -10,11 +10,16 @@
     <a appButton variant="outline" routerLink="/equipes">{{ 'ws.backTeams' | translate }}</a>
   </app-empty-state>
 } @else if (team(); as currentTeam) {
+  <a class="detail__back" routerLink="/equipes">
+    <app-icon name="chevron" [rotate]="180" [size]="14" />
+    {{ 'nav.teams' | translate }}
+  </a>
+
   <app-page-header
     [title]="currentTeam.name"
     [description]="'teams.members' | translate: { count: currentTeam.members.length }"
     [hideActionsOnMobile]="true">
-    <!-- ⚙ Ajustes (mobile ≤960px): abre a sessão com nome + membros. -->
+    <!-- Ajustes (mobile ≤960px): abre a sessão com nome + membros. -->
     <button
       class="team__gear"
       pageSettings
@@ -25,10 +30,6 @@
       <app-icon name="sliders" [size]="16" />
     </button>
     <div pageActions>
-      <a appButton variant="outline" routerLink="/equipes">
-        <app-icon name="chevron" [rotate]="180" [size]="14" />
-        {{ 'nav.teams' | translate }}
-      </a>
       <button
         appButton
         variant="filled"
@@ -40,11 +41,51 @@
       </button>
     </div>
   </app-page-header>
-
   <div class="detail">
     <section class="detail__main" aria-labelledby="problems-title">
-      <div class="section-head">
+      <div class="section-head problems-head">
         <h2 id="problems-title" class="section-head__title">{{ 'detail.problems' | translate }}</h2>
+
+        @if (problems().length > 0) {
+          <div class="problems-tools">
+            <label class="problems-search">
+              <span class="sr-only">{{ 'detail.searchProblems' | translate }}</span>
+              <input
+                class="bs-input problems-search__input"
+                type="search"
+                [value]="problemQuery()"
+                (input)="setProblemQuery($any($event.target).value)"
+                [placeholder]="'detail.searchProblems' | translate" />
+            </label>
+
+            <div
+              class="problems-filters"
+              role="group"
+              [attr.aria-label]="'detail.problems' | translate">
+              <button
+                type="button"
+                class="problems-filter"
+                [class.problems-filter--active]="problemStatusFilter() === 'all'"
+                (click)="setProblemStatusFilter('all')">
+                {{ 'detail.filterAll' | translate }}
+              </button>
+              <button
+                type="button"
+                class="problems-filter"
+                [class.problems-filter--active]="problemStatusFilter() === 'Open'"
+                (click)="setProblemStatusFilter('Open')">
+                {{ 'status.open' | translate }}
+              </button>
+              <button
+                type="button"
+                class="problems-filter"
+                [class.problems-filter--active]="problemStatusFilter() === 'Selected'"
+                (click)="setProblemStatusFilter('Selected')">
+                {{ 'status.selected' | translate }}
+              </button>
+            </div>
+          </div>
+        }
       </div>
 
       @if (problemsLoading()) {
@@ -74,9 +115,18 @@
             {{ 'detail.createProblem' | translate }}
           </button>
         </app-empty-state>
+      } @else if (filteredProblems().length === 0) {
+        <app-empty-state
+          icon="info"
+          [title]="'detail.problemsFilterEmpty.title' | translate"
+          [description]="'detail.problemsFilterEmpty.desc' | translate">
+          <button appButton variant="outline" type="button" (click)="clearProblemFilters()">
+            {{ 'detail.clearFilters' | translate }}
+          </button>
+        </app-empty-state>
       } @else {
         <ul class="problems">
-          @for (problem of problems(); track problem.code) {
+          @for (problem of filteredProblems(); track problem.code) {
             <li>
               <a class="problem" [routerLink]="['/ideias', problem.code]">
                 <div class="problem__head">
@@ -136,46 +186,54 @@
       </div>
 
       <div class="detail__side-body" (scroll)="onSettingsScroll($event)">
-        <section class="team-name-block" aria-labelledby="team-name-title">
-          <h2 id="team-name-title" class="section-head__title">
-            {{ 'detail.teamName' | translate }}
-          </h2>
-          <form (ngSubmit)="save()">
-            <app-field
-              controlId="team-name"
-              [label]="'detail.teamName' | translate"
-              required
-              [error]="
-                nameControl.touched && nameControl.invalid
-                  ? ('detail.teamNameError' | translate)
-                  : ''
-              ">
-              <input
-                id="team-name"
-                class="bs-input"
-                type="text"
-                [formControl]="nameControl"
-                maxlength="80" />
-            </app-field>
-          </form>
-        </section>
-
         <app-card padding="md">
+          <section class="team-name-block" aria-labelledby="team-name-title">
+            <form (ngSubmit)="save()">
+              <app-field
+                controlId="team-name"
+                [label]="'detail.teamName' | translate"
+                required
+                [error]="
+                  nameControl.touched && nameControl.invalid
+                    ? ('detail.teamNameError' | translate)
+                    : ''
+                ">
+                <input
+                  id="team-name"
+                  class="bs-input"
+                  type="text"
+                  [formControl]="nameControl"
+                  maxlength="80" />
+              </app-field>
+            </form>
+          </section>
+
           <div class="section-head section-head--compact">
-            <h2 id="members-title" class="section-head__title">
-              {{ 'detail.members' | translate }}
-            </h2>
-            <span class="section-head__count">{{ members().length }}</span>
+            <div class="section-head__title-row">
+              <h2 id="members-title" class="section-head__title">
+                {{ 'detail.members' | translate }} ({{ members().length }})
+              </h2>
+              <button
+                type="button"
+                class="section-head__info"
+                [appTooltip]="'detail.rolesHint' | translate"
+                [attr.aria-label]="'detail.rolesHint' | translate">
+                <app-icon name="info" [size]="14" />
+              </button>
+            </div>
           </div>
 
-          <ul class="members">
+          <ul class="members" role="list">
             @for (member of members(); track member.userCode) {
               <li class="member">
+                <span class="member__avatar" aria-hidden="true">{{
+                  memberInitials(member.userCode)
+                }}</span>
                 <div class="member__copy">
                   <strong>{{ memberName(member.userCode) }}</strong>
                   <span>{{ memberEmail(member.userCode) }}</span>
                 </div>
-                <div class="member__role">
+                <div class="member__actions">
                   <select
                     class="bs-select member__select"
                     [value]="roleName(member.role)"
@@ -189,65 +247,70 @@
                       </option>
                     }
                   </select>
+                  @if (!isOwner(member.role)) {
+                    <button
+                      appButton
+                      variant="text"
+                      size="sm"
+                      type="button"
+                      class="member__remove"
+                      [attr.aria-label]="
+                        'detail.removeMember' | translate: { name: memberName(member.userCode) }
+                      "
+                      (click)="removeMember(member.userCode)">
+                      <app-icon name="x" [size]="16" />
+                    </button>
+                  }
                 </div>
-                <button
-                  appButton
-                  variant="text"
-                  size="sm"
-                  type="button"
-                  class="member__remove"
-                  [attr.aria-label]="
-                    'detail.removeMember' | translate: { name: memberName(member.userCode) }
-                  "
-                  (click)="removeMember(member.userCode)">
-                  <app-icon name="x" [size]="16" />
-                </button>
               </li>
             }
           </ul>
 
-          <p class="role-hint">{{ 'detail.rolesHint' | translate }}</p>
-
           @if (availableUsers().length > 0) {
             <div class="add-member">
-              <app-field controlId="member-user" [label]="'detail.addPerson' | translate">
-                <select
-                  id="member-user"
-                  class="bs-select"
-                  [value]="selectedUserCode() ?? ''"
-                  (change)="onUserSelected($any($event.target).value)">
-                  <option value="">{{ 'detail.select' | translate }}</option>
-                  @for (user of availableUsers(); track user.code) {
-                    <option [value]="user.code">{{ user.name }}</option>
-                  }
-                </select>
-              </app-field>
+              <div class="add-member__grid">
+                <app-field controlId="member-user" [label]="'detail.addPerson' | translate">
+                  <select
+                    id="member-user"
+                    class="bs-select"
+                    [value]="selectedUserCode() ?? ''"
+                    (change)="onUserSelected($any($event.target).value)">
+                    <option value="">{{ 'detail.select' | translate }}</option>
+                    @for (user of availableUsers(); track user.code) {
+                      <option [value]="user.code">{{ user.name }}</option>
+                    }
+                  </select>
+                </app-field>
 
-              <app-field controlId="member-role" [label]="'detail.role' | translate">
-                <select
-                  id="member-role"
-                  class="bs-select"
-                  [value]="roleName(selectedRole())"
-                  (change)="onRoleSelected($any($event.target).value)">
-                  @for (name of roleNames; track name) {
-                    <option [value]="name" [selected]="name === roleName(selectedRole())">
-                      {{ roleLabel(name) }}
-                    </option>
-                  }
-                </select>
-              </app-field>
+                <app-field controlId="member-role" [label]="'detail.role' | translate">
+                  <select
+                    id="member-role"
+                    class="bs-select"
+                    [value]="roleName(selectedRole())"
+                    (change)="onRoleSelected($any($event.target).value)">
+                    @for (name of roleNames; track name) {
+                      <option [value]="name" [selected]="name === roleName(selectedRole())">
+                        {{ roleLabel(name) }}
+                      </option>
+                    }
+                  </select>
+                </app-field>
+              </div>
+
+              <p class="add-member__role-desc">
+                {{ roleDescription(roleName(selectedRole())) }}
+              </p>
 
               <button
                 appButton
                 variant="outline"
                 type="button"
+                class="add-member__submit"
                 [disabled]="!selectedUserCode()"
                 (click)="addMember()">
                 <app-icon name="plus" [size]="16" />
                 {{ 'detail.add' | translate }}
               </button>
-
-              <p class="role-hint">{{ roleDescription(roleName(selectedRole())) }}</p>
             </div>
           }
 

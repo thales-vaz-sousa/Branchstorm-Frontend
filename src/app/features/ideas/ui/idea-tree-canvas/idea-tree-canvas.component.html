@@ -2,6 +2,10 @@
   #canvas
   class="canvas"
   [class.canvas--panel-open]="panelOpen()"
+  [class.canvas--zoomed-out]="transform().k < 0.5"
+  [style.--k]="transform().k"
+  [style.--x.px]="transform().x"
+  [style.--y.px]="transform().y"
   tabindex="0"
   (keydown.escape)="panelClosed.emit()">
   <!-- Barra de controles: no desktop é um overlay neutro (os filhos ficam
@@ -334,7 +338,6 @@
           [style.left.px]="item.x"
           [style.top.px]="item.y"
           [style.width.px]="item.w"
-          [style.height.px]="item.h"
           (click)="select(item.node.code)"
           (keydown)="onNodeKeydown($event, item)">
           <span class="tree-node__type">{{ typeLabel(item.node) }}</span>
@@ -347,10 +350,16 @@
 
           <div class="tree-node__foot">
             <app-status-badge [status]="item.node.status" />
-            @if (item.node.validation !== 'NotTested') {
-              <span class="tree-node__validation-chip" [title]="validationLabel(item.node)">
-                <app-icon name="flask" [size]="12" />
-                {{ validationLabel(item.node) }}
+            @if (item.node.validation === 'Validated') {
+              <span class="tree-node__validation" [title]="item.node.title">
+                <app-icon name="check" [size]="12" />
+                {{ validationHint(item.node) }}
+              </span>
+            } @else if (item.node.validation === 'Refuted') {
+              <span
+                class="tree-node__validation tree-node__validation--refuted"
+                [title]="item.node.title">
+                {{ validationHint(item.node) }}
               </span>
             }
           </div>

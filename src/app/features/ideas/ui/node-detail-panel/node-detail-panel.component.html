@@ -30,7 +30,7 @@
         </button>
       </div>
 
-      <h2 class="panel__title">{{ current.title }}</h2>
+      <h2 class="panel__title" [attr.title]="current.title">{{ current.title }}</h2>
 
       <div class="panel__badges">
         <app-status-badge class="panel__badges-status" [status]="current.status" />

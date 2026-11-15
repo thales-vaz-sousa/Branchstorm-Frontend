@@ -11,12 +11,22 @@ const relativeFormatter = new Intl.RelativeTimeFormat('pt-BR', {
   numeric: 'auto',
 });
 
+const shortDateFormatter = new Intl.DateTimeFormat('pt-BR', {
+  day: 'numeric',
+  month: 'short',
+});
+
 export function formatDateTime(value: string | Date): string {
   return dateTimeFormatter.format(new Date(value));
 }
 
 export function formatDate(value: string | Date): string {
   return dateFormatter.format(new Date(value));
+}
+
+/** Data curta para cartões: só dia e mês ("5 out") — a data completa fica no painel. */
+export function formatShortDate(value: string | Date): string {
+  return shortDateFormatter.format(new Date(value));
 }
 
 export function formatRelative(value: string | Date): string {

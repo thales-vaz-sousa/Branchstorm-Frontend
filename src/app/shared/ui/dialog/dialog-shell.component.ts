@@ -56,10 +56,31 @@ import { IconComponent } from '../icon/icon.component';
         max-height: min(86dvh, 760px);
         background: var(--card);
         border: 1px solid var(--line);
-        border-bottom: 0;
-        border-radius: 12px 12px 0 0;
+        border-radius: 12px;
+        box-shadow: var(--dialog-shadow);
         overflow: hidden;
-        animation: bs-sheet-in 180ms var(--ease);
+        animation: bs-dialog-in 180ms var(--ease);
+      }
+
+      @keyframes bs-dialog-in {
+        from {
+          opacity: 0;
+          transform: translateY(12px) scale(0.98);
+        }
+
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .dialog {
+          border-bottom: 0;
+          border-radius: 12px 12px 0 0;
+          box-shadow: none;
+          animation-name: bs-sheet-in;
+        }
       }
 
       @keyframes bs-sheet-in {
