@@ -1,7 +1,7 @@
 <app-page-header
   [title]="'teams.title' | translate"
   [description]="'teams.desc' | translate"
->
+  [hideActionsOnMobile]="true">
   <div pageActions>
     <button appButton variant="filled" type="button" (click)="createTeam()">
       <app-icon name="plus" [size]="16" />
@@ -9,6 +9,15 @@
     </button>
   </div>
 </app-page-header>
+
+<!-- Barra inferior fixa (mobile ≤640px): a ação principal da página mora aqui
+     no padrão das demais barras. Desktop usa o cabeçalho. -->
+<div class="teams__bar">
+  <button appButton variant="filled" type="button" (click)="createTeam()">
+    <app-icon name="plus" [size]="16" />
+    {{ 'teams.create' | translate }}
+  </button>
+</div>
 
 @if (loading()) {
   <div class="loading-area" aria-busy="true" [attr.aria-label]="'teams.loading' | translate">
@@ -25,8 +34,7 @@
   <app-empty-state
     icon="message"
     [title]="'teams.empty.title' | translate"
-    [description]="'teams.empty.desc' | translate"
-  >
+    [description]="'teams.empty.desc' | translate">
     <button appButton variant="filled" type="button" (click)="createTeam()">
       {{ 'teams.create' | translate }}
     </button>
@@ -41,7 +49,9 @@
               <header class="team-card__head">
                 <div class="team-card__title">
                   <strong>{{ team.name }}</strong>
-                  <span class="team-card__meta">{{ 'teams.members' | translate: { count: team.members.length } }}</span>
+                  <span class="team-card__meta">{{
+                    'teams.members' | translate: { count: team.members.length }
+                  }}</span>
                 </div>
                 <app-icon name="arrow" [size]="16" class="team-card__arrow" />
               </header>

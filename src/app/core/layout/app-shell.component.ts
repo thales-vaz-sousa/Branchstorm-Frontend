@@ -27,6 +27,8 @@ import { LoadingStore } from '@core/ui/loading.store';
 import { ThemeService, type ThemePreference } from '@core/ui/theme.service';
 import { anyMockEnabled } from '@core/mock/mock-mode';
 import { environment } from '@env/environment';
+import { DialogService } from '@shared/ui/dialog/dialog.service';
+import { LanguageDialogComponent } from './language-dialog.component';
 
 @Component({
   selector: 'app-shell',
@@ -52,6 +54,7 @@ export class AppShellComponent {
   protected readonly theme = inject(ThemeService);
   protected readonly i18n = inject(I18nService);
   protected readonly loading = inject(LoadingStore);
+  private readonly dialogs = inject(DialogService);
   protected readonly environment = environment;
   protected readonly demoMode = anyMockEnabled() && !environment.production;
   protected readonly isTreeRoute = signal(this.router.url.includes('/ideias/'));
@@ -103,6 +106,14 @@ export class AppShellComponent {
 
   protected setLang(code: LangCode): void {
     this.i18n.setLang(code);
+  }
+
+  /** Idioma como sessão no mobile (≤640px), no padrão das demais sessões;
+      o menu popup (cdkMenu) continua no desktop — troca só via CSS. */
+  protected openLanguage(): void {
+    this.dialogs.open(LanguageDialogComponent, {
+      panelClass: ['bs-dialog-panel', 'bs-dialog-full'],
+    });
   }
 
   protected logout(): void {

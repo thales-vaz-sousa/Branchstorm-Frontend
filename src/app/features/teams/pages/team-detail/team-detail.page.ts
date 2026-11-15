@@ -37,12 +37,7 @@ import {
 } from '@shared/models/team.model';
 import type { CreateLinkRequest } from '@shared/models/link.model';
 import { IdeaApi } from '@features/ideas/data-access/idea-api.service';
-import {
-  TEAM_ROLE_NAMES,
-  roleDescription,
-  roleLabel,
-  teamRoleName,
-} from '@shared/utils/enum.util';
+import { TEAM_ROLE_NAMES, roleDescription, roleLabel, teamRoleName } from '@shared/utils/enum.util';
 
 @Component({
   selector: 'app-team-detail-page',
@@ -89,13 +84,41 @@ export class TeamDetailPage {
 
   protected readonly code = signal('');
   protected readonly members = signal<readonly TeamMember[]>([]);
-  protected readonly problemCounts = signal<ReadonlyMap<string, { solutions: number; finals: number }>>(
-    new Map(),
-  );
+  protected readonly problemCounts = signal<
+    ReadonlyMap<string, { solutions: number; finals: number }>
+  >(new Map());
   protected readonly saving = signal(false);
   protected readonly creatingProblem = signal(false);
   protected readonly selectedUserCode = signal<string | null>(null);
   protected readonly selectedRole = signal<TeamMemberRole>(TeamMemberRole.Collaborator);
+
+  /** Sessão de ajustes (nome + membros) no mobile (≤960px): abre pelo botão
+      ⚙ ao lado do título; no desktop a coluna lateral continua no lugar. */
+  protected readonly settingsOpen = signal(false);
+  /** Rolar para baixo dentro da sessão → tela inteira (padrão do painel do
+      nó). Só volta fechando/reabrindo. */
+  protected readonly settingsExpanded = signal(false);
+
+  protected openSettings(): void {
+    this.settingsOpen.set(true);
+  }
+
+  protected closeSettings(): void {
+    this.settingsOpen.set(false);
+    this.settingsExpanded.set(false);
+  }
+
+  protected onSettingsScroll(event: Event): void {
+    if (this.settingsExpanded()) {
+      return;
+    }
+
+    const body = event.target as HTMLElement | null;
+
+    if (body && body.scrollTop > 24) {
+      this.settingsExpanded.set(true);
+    }
+  }
 
   protected readonly roleNames = TEAM_ROLE_NAMES;
 

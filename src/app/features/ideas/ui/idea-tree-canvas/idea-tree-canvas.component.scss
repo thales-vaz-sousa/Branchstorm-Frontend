@@ -166,10 +166,11 @@
   white-space: nowrap;
 }
 
-/* Seta de abrir/fechar ramos (círculo no conector, no meio do vão, estilo
-   FamilySearch — a linha fica visível grudada na borda do card, sem a seta
-   em cima da saída) ----------------------------------------------------- */
-.tree-node__toggle {
+/* Seta de abrir/fechar ramos e botão "+" de continuidade (círculo no
+   conector, no meio do vão, estilo FamilySearch — a linha fica visível
+   grudada na borda do card, sem a seta em cima da saída) --------------- */
+.tree-node__toggle,
+.tree-node__add {
   position: absolute;
   top: 50%;
   right: -54px /* centro do vão (LEVEL_GAP 80 / 2 = 40, +14px da seta) */;
@@ -189,17 +190,48 @@
   transition:
     border-color var(--duration-fast) var(--ease),
     color var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease),
     transform var(--duration-fast) var(--ease);
 }
 
-.tree-node__toggle:hover {
+.tree-node__toggle:hover,
+.tree-node__add:hover {
   border-color: var(--teal);
   color: var(--tink);
   transform: translateY(-50%) scale(1.12);
 }
 
-/* Retrato: filhos embaixo → seta no meio do vão vertical, no conector */
-.tree-node--portrait .tree-node__toggle {
+/* O "+" (nós folha) é um convite, não um estado: borda tracejada e tinta
+   teal, com ramo fantasma ligando o card ao botão (paisagem: horizontal). */
+.tree-node__add {
+  border-style: dashed;
+  color: var(--tink);
+}
+
+.tree-node__add::before {
+  content: "";
+  position: absolute;
+  right: 100%;
+  top: calc(50% - 1px);
+  width: 26px;
+  height: 0;
+  border-top: 2px dashed var(--line);
+}
+
+/* área de toque generosa sem mudar o desenho (28px visual → 44px alvo) */
+.tree-node__add::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+
+.tree-node__add:hover {
+  background: var(--soft);
+}
+
+/* Retrato: filhos embaixo → os dois círculos no meio do vão vertical */
+.tree-node--portrait .tree-node__toggle,
+.tree-node--portrait .tree-node__add {
   top: auto;
   right: auto;
   bottom: -54px /* centro do vão vertical */;
@@ -207,8 +239,21 @@
   transform: translateX(-50%);
 }
 
-.tree-node--portrait .tree-node__toggle:hover {
+.tree-node--portrait .tree-node__toggle:hover,
+.tree-node--portrait .tree-node__add:hover {
   transform: translateX(-50%) scale(1.12);
+}
+
+.tree-node--portrait .tree-node__add::before {
+  right: auto;
+  top: auto;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 26px;
+  border-top: 0;
+  border-left: 2px dashed var(--line);
 }
 
 /* Retrato: card centralizado (tipo + título + meta + selo no meio) */
@@ -453,6 +498,20 @@
   background: var(--muted);
 }
 
+/* Barra de controles -------------------------------------------------------
+   No desktop é um overlay neutro (pointer-events: none; os filhos continuam
+   absolutamente posicionados como antes). No mobile (≤640px) vira a barra
+   única fixa no rodapé: Detalhes | Minimapa | Opções·zoom | Propor. */
+.canvas__bar {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.canvas__bar > * {
+  pointer-events: auto;
+}
+
 /* Toolbar flutuante (topo-centro, estilo FamilySearch) -------------------- */
 .canvas__toolbar-wrap {
   position: absolute;
@@ -465,11 +524,19 @@
 .canvas__toolbar {
   display: flex;
   align-items: center;
-  gap: 2px;
+  justify-content: space-between;
   padding: 3px 6px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--card);
+  flex-wrap: wrap;
+}
+
+/* Distribui os botões principal (layout, sliders, center) uniformemente.
+   Os separadores virtuais foram removidos — a distribuição é feita pelo
+   justify-content do pai. */
+.canvas__sep {
+  display: none;
 }
 
 .canvas__layout-btn {
@@ -518,6 +585,27 @@
 .canvas__layout-menu .bs-menu__item:focus-visible {
   background: var(--soft);
   color: var(--tink);
+}
+
+/* Alternância de layout no mobile: segmented control dentro do sheet Opções
+   (no desktop o seletor fica na própria toolbar). */
+.canvas__layout-switch {
+  display: none;
+}
+
+/* Escurecimento atrás do sheet Opções e o botão de exportar: exclusivos do
+   mobile (≤640px), onde as configurações viram bottom sheet. No desktop
+   (>640px) o sheet não escurece o fundo e não mostra o botão exportar. */
+.canvas__settings-scrim,
+.canvas__export {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .canvas__settings-scrim,
+  .canvas__export {
+    display: block;
+  }
 }
 
 .canvas__icon-btn {
@@ -712,16 +800,6 @@
   }
 }
 
-/* Botão flutuante de criar filho do item selecionado (substitui o fantasma) */
-.canvas__add {
-  position: absolute;
-  left: 50%;
-  bottom: var(--space-4);
-  transform: translateX(-50%);
-  z-index: 5;
-  border-radius: var(--radius-pill);
-}
-
 /* Mini-legenda compacta sempre visível: status e validação separados */
 .canvas__mini-legend {
   position: absolute;
@@ -781,25 +859,83 @@
 }
 
 @media (max-width: 640px) {
-  /* No mobile, "Detalhes" vira um botão de info no canto inferior direito
-     (a toolbar fica sozinha no topo, sem sobrepor nada). */
-  .canvas__details {
-    top: auto;
-    left: auto;
-    right: var(--space-2);
-    bottom: var(--space-2);
-    width: auto;
-    max-width: calc(100vw - 16px);
-    display: flex;
-    flex-direction: column-reverse;
+  /* Barra única no rodapé: Detalhes | Minimapa | Opções · zoom | Propor.
+     O topo do canvas fica limpo — só a árvore. */
+  .canvas__bar {
+    inset: auto 0 0 0;
     z-index: 6;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2);
+    padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
+    background: var(--card);
+    border-top: 1px solid var(--line);
+    pointer-events: auto;
+    transition:
+      transform var(--duration) var(--ease),
+      opacity var(--duration) var(--ease);
   }
 
-  /* Colapsado: sem caixa, só o botão pílula (igual Minimapa/Propor). */
-  .canvas__details:not(:has(.canvas__details-body)) {
-    padding: 0;
+  /* Painel do nó aberto: o sheet ocupa o rodapé, então a barra sai de cena. */
+  .canvas--panel-open .canvas__bar {
+    transform: translateY(120%);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* Ordem visual (o DOM segue a leitura do desktop): inspecção → navegação → ação. */
+  .canvas__details {
+    order: 1;
+  }
+
+  .canvas__minimap-wrap {
+    order: 2;
+  }
+
+  .canvas__toolbar-wrap {
+    order: 3;
+  }
+
+  /* Detalhes: vira pílula na barra; o corpo abre como cartão acima dela. */
+  .canvas__details {
+    position: static;
+    width: auto;
+    max-width: none;
+    display: flex;
+    flex-direction: column-reverse;
     border: 0;
     background: transparent;
+    overflow: visible;
+  }
+
+  .canvas__details-toggle {
+    justify-content: center;
+    gap: var(--space-2);
+    min-width: 40px;
+    height: 40px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    background: var(--card);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .canvas__details-body {
+    position: absolute;
+    right: var(--space-2);
+    bottom: calc(100% + var(--space-2));
+    width: min(320px, calc(100vw - 16px));
+    max-height: 55dvh;
+    overflow-y: auto;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--card);
   }
 
   .canvas__details-info {
@@ -818,57 +954,71 @@
     display: none;
   }
 
-  .canvas__details-toggle {
-    justify-content: center;
-    gap: var(--space-2);
-    min-width: 40px;
-    height: 40px;
-    padding: 0 14px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-pill);
-    background: var(--card);
-    font-size: var(--text-sm);
-    font-weight: 500;
-    white-space: nowrap;
-  }
-
-  .canvas__details-body {
-    max-height: 55dvh;
-    overflow-y: auto;
-  }
-
+  /* Toolbar embarca na barra (sem caixa própria, sem scroll). */
   .canvas__toolbar-wrap {
-    top: var(--space-2);
-    right: var(--space-2);
-    left: var(--space-2);
+    position: static;
     transform: none;
     display: flex;
-    justify-content: center;
-    pointer-events: none;
+    pointer-events: auto;
   }
 
   .canvas__toolbar {
-    pointer-events: auto;
     flex-wrap: nowrap;
     justify-content: flex-start;
-    max-width: 100%;
-    overflow-x: auto;
-    scrollbar-width: none;
-    padding: 3px 4px;
+    padding: 0;
+    border: 0;
+    background: transparent;
   }
 
-  .canvas__toolbar::-webkit-scrollbar {
+  /* Seletor de layout mora no sheet Opções no mobile. */
+  .canvas__layout-btn,
+  .canvas__layout-btn + .canvas__sep {
     display: none;
   }
 
-  .canvas__layout-btn {
-    padding: 4px 6px;
-    flex-shrink: 0;
+  .canvas__icon-btn {
+    min-width: 40px;
+    min-height: 40px;
   }
 
-  .canvas__icon-btn {
-    min-width: 28px;
-    flex-shrink: 0;
+  /* Alternância de layout: segmented control full-width (flex), dividindo os
+     botões ao meio (50% cada), sem espaço no meio. */
+  .canvas__layout-switch {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    background: var(--bg);
+    width: 100%;
+  }
+
+  .canvas__layout-option {
+    flex: 1;
+    min-height: 32px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--muted);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .canvas__layout-option--active {
+    background: var(--soft);
+    color: var(--tink);
+  }
+
+  /* Conteúdo do sheet centralizado (o título continua com o × à direita). */
+  .canvas__switch {
+    align-self: center;
+  }
+
+  .canvas__settings-actions {
+    justify-content: center;
   }
 
   /* Cards menores e mais compactos (o tamanho em px vem do layout) */
@@ -890,17 +1040,25 @@
     font-size: 9px;
   }
 
-  .canvas__minimap-svg {
-    width: 120px;
-    height: 120px;
+  /* Sem minimapa no mobile: a árvore em retrato já cabe na tela e o pan/pinch
+     resolve a navegação. (Fica disponível em tablet/desktop.) */
+  .canvas__minimap-wrap {
+    display: none;
+  }
+
+  /* Zoom é por pinça no mobile: os botões − % + saem da barra; o ⌖ (enquadrar)
+     continua como alternativa sem arrastar. */
+  .canvas__sep--zoom,
+  .canvas__zoom-out,
+  .canvas__zoom,
+  .canvas__zoom-in {
+    display: none;
   }
 
   .canvas__mini-legend {
     display: none;
   }
 
-  /* Linha inferior com 3 botões: Minimapa | Propor | Detalhes */
-  .canvas__add,
   .canvas__minimap-toggle {
     height: 40px;
     padding: 0 12px;
@@ -942,13 +1100,16 @@
     max-width: calc(100vw - 16px);
   }
 
-  .canvas__toolbar-wrap {
-    top: var(--space-2);
+  /* economiza espaço: pílulas viram só ícone e o % de zoom sai da barra */
+  .canvas__zoom,
+  .canvas__details-short,
+  .canvas__minimap-label {
+    display: none;
   }
 
-  /* economiza espaço: o nome do layout e o % de zoom saem da barra */
-  .canvas__layout-label,
-  .canvas__zoom {
-    display: none;
+  .canvas__details-toggle,
+  .canvas__minimap-toggle {
+    min-width: 40px;
+    padding: 0 10px;
   }
 }

@@ -1,4 +1,4 @@
-import {
+﻿import {
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -17,34 +17,38 @@ import { SpinnerComponent } from '@shared/ui/spinner/spinner.component';
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
 import { TabsComponent, type TabItem } from '@shared/ui/tabs/tabs.component';
 import { ValidationBadgeComponent } from '@shared/ui/validation-badge/validation-badge.component';
+import { RelativeDatePipe } from '@shared/pipes/relative-date.pipe';
+import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { DialogService } from '@shared/ui/dialog/dialog.service';
 import {
   ReasonDialogComponent,
   type ReasonDialogData,
 } from '@shared/ui/dialog/reason-dialog.component';
-import { RelativeDatePipe } from '@shared/pipes/relative-date.pipe';
-import { DateTimePipe } from '@shared/pipes/date-time.pipe';
-import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { SessionStore } from '@core/auth/session.store';
 import { NotificationService } from '@core/ui/notification.service';
-import { TeamsStore } from '@features/teams/state/teams.store';
 import { UserDirectoryStore } from '@features/users/state/user-directory.store';
 import { IdeaTreeStore } from '@features/ideas/state/idea-tree.store';
 import { HypothesisStore } from '@features/hypotheses/state/hypothesis.store';
 import { FeedbackStore } from '@features/feedbacks/state/feedback.store';
-import { HypothesisFormDialogComponent } from '@features/hypotheses/ui/hypothesis-form-dialog/hypothesis-form-dialog.component';
+import {
+  HypothesisFormDialogComponent,
+  type HypothesisFormDialogData,
+} from '@features/hypotheses/ui/hypothesis-form-dialog/hypothesis-form-dialog.component';
 import {
   HypothesisResultDialogComponent,
   type HypothesisResultDialogData,
 } from '@features/hypotheses/ui/hypothesis-result-dialog/hypothesis-result-dialog.component';
-import { FeedbackFormDialogComponent } from '@features/feedbacks/ui/feedback-form-dialog/feedback-form-dialog.component';
-import type { LinkResult, LinkValidationName, SelectLinkRequest } from '@shared/models/link.model';
+import {
+  FeedbackFormDialogComponent,
+  type FeedbackFormDialogData,
+} from '@features/feedbacks/ui/feedback-form-dialog/feedback-form-dialog.component';
 import type {
   CreateHypothesisRequest,
   HypothesisResult,
   RegisterHypothesisResultRequest,
 } from '@shared/models/hypothesis.model';
 import type { CreateFeedbackRequest } from '@shared/models/feedback.model';
+import type { LinkResult, LinkValidationName, SelectLinkRequest } from '@shared/models/link.model';
 import { countDiscardedBySelection } from '@shared/utils/tree.util';
 import { I18nService } from '@core/i18n/i18n.service';
 import { linkTypeLabel } from '@shared/utils/enum.util';
@@ -63,7 +67,6 @@ const EMPTY_STATE = { items: [], loading: false, error: null } as const;
     TabsComponent,
     ValidationBadgeComponent,
     RelativeDatePipe,
-    DateTimePipe,
     TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -81,6 +84,7 @@ export class NodeDetailPanelComponent {
   readonly createChild = output<LinkResult>();
   readonly treeChanged = output<void>();
   readonly closed = output<void>();
+  readonly expandSheet = output<void>();
 
   private readonly session = inject(SessionStore);
   private readonly i18n = inject(I18nService);
@@ -89,8 +93,17 @@ export class NodeDetailPanelComponent {
   private readonly ideaTree = inject(IdeaTreeStore);
   private readonly hypotheses = inject(HypothesisStore);
   private readonly feedbacks = inject(FeedbackStore);
-  private readonly teams = inject(TeamsStore);
   private readonly users = inject(UserDirectoryStore);
+
+  constructor() {
+    effect(() => {
+      const node = this.node();
+
+      if (node) {
+        void this.loadRelated(node);
+      }
+    });
+  }
 
   protected readonly activeTab = signal('details');
 
@@ -125,18 +138,9 @@ export class NodeDetailPanelComponent {
     ),
   );
 
-  protected readonly childrenLabel = computed(() =>
-    this.i18n.t(
-      this.node()?.type === 'Problem' ? 'panel.childrenSolutions' : 'panel.childrenVersions',
-      { count: this.children().length },
-    ),
-  );
-
-  protected readonly childrenEmptyLabel = computed(() =>
-    this.i18n.t(
-      this.node()?.type === 'Problem' ? 'panel.noSolutions' : 'panel.noVersions',
-    ),
-  );
+  protected typeLabel(node: LinkResult): string {
+    return linkTypeLabel(node.type, this.i18n.lang());
+  }
 
   protected readonly discardMessage = computed(() => {
     const node = this.node();
@@ -180,48 +184,38 @@ export class NodeDetailPanelComponent {
     ];
   });
 
-  constructor() {
-    effect(() => {
-      const node = this.node();
-
-      if (node) {
-        void this.loadRelated(node);
-      }
-    });
+  protected onTabChange(id: string): void {
+    this.activeTab.set(id);
   }
 
-  protected typeLabel(node: LinkResult): string {
-    return linkTypeLabel(node.type, this.i18n.lang());
-  }
+  /** Rolagem para baixo no corpo da sessão pede a expansão do sheet (tela toda). */
+  protected onBodyScroll(event: Event): void {
+    const body = event.target as HTMLElement;
 
-  protected authorName(code: string | null): string {
-    if (!code) {
-      return this.i18n.t('panel.authorUnknown');
+    if (body.scrollTop > 24) {
+      this.expandSheet.emit();
     }
-
-    return this.users.usersByCode().get(code)?.name ?? this.i18n.t('canvas.authorFallback');
-  }
-
-  protected teamName(code: string | null): string {
-    if (!code) {
-      return this.i18n.t('panel.teamUnknown');
-    }
-
-    return (
-      this.teams.teams().find((team) => team.code === code)?.name ?? this.i18n.t('canvas.team')
-    );
-  }
-
-  protected resultBadge(hypothesis: HypothesisResult): LinkValidationName {
-    return hypothesis.result ?? 'NotTested';
   }
 
   protected copyLink(code: string): void {
-    const url = `${location.origin}${location.pathname}#/ideias/${code}`;
+    const base = location.hash.split('?')[0];
+    const url = `${location.origin}${location.pathname}${base}?no=${code}`;
+
     void navigator.clipboard?.writeText(url).then(
       () => this.notifications.success(this.i18n.t('panel.linkCopied')),
       () => this.notifications.info(url),
     );
+  }
+
+  protected authorName(code: string | null): string {
+    if (!code) {
+      return this.i18n.t('canvas.authorFallback');
+    }
+    return this.users.usersByCode().get(code)?.name ?? this.i18n.t('panel.authorUnknown');
+  }
+
+  protected resultBadge(hypothesis: HypothesisResult): LinkValidationName {
+    return hypothesis.result ?? 'NotTested';
   }
 
   protected async selectNode(): Promise<void> {
@@ -262,7 +256,7 @@ export class NodeDetailPanelComponent {
 
     const reason = await this.openReason({
       title: this.i18n.t('panel.finalTitle'),
-      message: this.i18n.t('panel.finalMessage'),
+      message: this.discardMessage(),
       confirmLabel: this.i18n.t('panel.finalConfirm'),
       requireReason: true,
       placeholder: this.i18n.t('panel.finalPlaceholder'),
@@ -288,7 +282,7 @@ export class NodeDetailPanelComponent {
       return;
     }
 
-    const ref = this.dialogs.open<CreateHypothesisRequest, { linkCode: string; linkTitle: string }>(
+    const ref = this.dialogs.open<CreateHypothesisRequest, HypothesisFormDialogData>(
       HypothesisFormDialogComponent,
       {
         data: { linkCode: node.code, linkTitle: node.title },
@@ -340,13 +334,13 @@ export class NodeDetailPanelComponent {
       return;
     }
 
-    const ref = this.dialogs.open<
-      CreateFeedbackRequest,
-      { linkCode: string; linkTitle: string; autorCode: string }
-    >(FeedbackFormDialogComponent, {
-      data: { linkCode: node.code, linkTitle: node.title, autorCode },
-      width: '520px',
-    });
+    const ref = this.dialogs.open<CreateFeedbackRequest, FeedbackFormDialogData>(
+      FeedbackFormDialogComponent,
+      {
+        data: { linkCode: node.code, linkTitle: node.title, autorCode },
+        width: '520px',
+      },
+    );
     const request = await firstValueFrom(ref.closed);
 
     if (!request) {
@@ -361,29 +355,12 @@ export class NodeDetailPanelComponent {
     }
   }
 
-  protected reloadHypotheses(): void {
+  protected async reloadHypotheses(): Promise<void> {
     const node = this.node();
 
     if (node) {
-      void this.hypotheses.load(node.code);
+      await this.hypotheses.load(node.code);
     }
-  }
-
-  protected reloadFeedback(): void {
-    const node = this.node();
-
-    if (node) {
-      void this.feedbacks.load(node.code);
-    }
-  }
-
-  private async openReason(data: ReasonDialogData): Promise<string | undefined> {
-    const ref = this.dialogs.open<string, ReasonDialogData>(ReasonDialogComponent, {
-      data,
-      width: '480px',
-    });
-
-    return firstValueFrom(ref.closed);
   }
 
   private async loadRelated(node: LinkResult): Promise<void> {
@@ -395,5 +372,14 @@ export class NodeDetailPanelComponent {
     ].filter((code): code is string => Boolean(code));
 
     await this.users.ensureLoaded(codes);
+  }
+
+  protected async openReason(data: ReasonDialogData): Promise<string | undefined> {
+    const ref = this.dialogs.open<string, ReasonDialogData>(ReasonDialogComponent, {
+      data,
+      width: '480px',
+    });
+
+    return firstValueFrom(ref.closed);
   }
 }

@@ -562,12 +562,12 @@ function selectLink(
     if (discarded.has(item.code)) {
       return addHistory(
         { ...item, status: 'Discarded' },
-        `Discarded: sibling ${code} was selected`,
+        `Discarded: sibling "${link.title}" was selected`,
       );
     }
 
     if (selectedAncestors.has(item.code) && item.status !== 'Final' && item.status !== 'Selected') {
-      return addHistory({ ...item, status: 'Selected' }, `Selected: ancestor of ${code}`);
+      return addHistory({ ...item, status: 'Selected' }, `Selected: ancestor of "${link.title}"`);
     }
 
     return item;

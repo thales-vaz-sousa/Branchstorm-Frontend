@@ -25,6 +25,7 @@
           [showDiscarded]="showDiscarded()"
           [rootNode]="rootNode"
           [teamName]="teamName()"
+          [panelOpen]="drawerOpen()"
           (nodeSelected)="selectNode($event)"
           (collapseToggled)="toggleCollapse($event)"
           (panelClosed)="closePanel()"
@@ -48,6 +49,7 @@
       <div
         class="workspace__panel"
         [class.workspace__panel--open]="drawerOpen()"
+        [class.workspace__panel--expanded]="panelExpanded()"
         [attr.aria-hidden]="!drawerOpen()">
         <app-node-detail-panel
           [node]="selectedNode()"
@@ -57,6 +59,7 @@
           [saving]="saving()"
           (nodeSelected)="selectNode($event)"
           (createChild)="createChild($event)"
+          (expandSheet)="panelExpanded.set(true)"
           (treeChanged)="refresh()"
           (closed)="closePanel()" />
       </div>

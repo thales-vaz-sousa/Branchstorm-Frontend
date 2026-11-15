@@ -13,6 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { stratify, tree as d3Tree } from 'd3-hierarchy';
+import { firstValueFrom } from 'rxjs';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
 import { ButtonDirective } from '@shared/ui/button/button.directive';
@@ -24,6 +25,8 @@ import { linkTypeLabel, linkValidationLabel } from '@shared/utils/enum.util';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { I18nService } from '@core/i18n/i18n.service';
 import { formatDate } from '@shared/utils/date.util';
+import { DialogService } from '@shared/ui/dialog/dialog.service';
+import { TreeInfoDialogComponent, type TreeInfoDialogData } from './tree-info-dialog.component';
 
 export type TreeLayoutMode = 'landscape' | 'portrait';
 
@@ -93,6 +96,8 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
   readonly showDiscarded = input(true);
   readonly rootNode = input<LinkResult | null>(null);
   readonly teamName = input('');
+  /** Painel de detalhe aberto: no mobile a barra sai de cena (o sheet ocupa o rodapé). */
+  readonly panelOpen = input(false);
 
   readonly nodeSelected = output<string>();
   readonly collapseToggled = output<string>();
@@ -104,19 +109,37 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
   readonly layoutChange = output<TreeLayoutMode>();
   readonly homeRequested = output<void>();
   readonly teamRequested = output<void>();
+  /** Exportar a árvore: a página (dona do dado completo) resolve o download. */
+  readonly exportRequested = output<void>();
 
   private readonly canvas = viewChild<ElementRef<HTMLElement>>('canvas');
   private readonly layoutTrigger = viewChild(CdkMenuTrigger);
   private readonly destroyRef = inject(DestroyRef);
   private readonly i18n = inject(I18nService);
+  private readonly dialogs = inject(DialogService);
+  /** ≤640px: o ⓘ abre a sessão de infos (diálogo) em vez do card solto. */
+  private readonly compactQuery =
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(max-width: 640px)')
+      : null;
   private panState: {
     readonly startX: number;
     readonly startY: number;
     readonly origX: number;
     readonly origY: number;
     moved: boolean;
+    /** Limiar de pan para este gesto: touch desliza mais que o mouse. */
+    readonly limit: number;
+    readonly downTime: number;
+    readonly downTarget: HTMLElement | null;
   } | null = null;
-  private ignoreNextClick = false;
+  /** Consome o próximo click no documento (capture): após a seleção no pointerup,
+      o sheet abre antes do click nativo ser despachado — sem isso o click acerta
+      o scrim do painel (fora do canvas) e o fecha na sequência. */
+  private clickSwallow: {
+    readonly swallow: (event: MouseEvent) => void;
+    readonly clearOnNextDown: () => void;
+  } | null = null;
   private centeredLayout = '';
   private panToken = 0;
 
@@ -126,7 +149,9 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
   protected readonly showDetails = signal(false);
   protected readonly showMinimap = signal(false);
   /** Largura do viewport (cards menores em telas finas — mobile). */
-  protected readonly viewportWidth = signal<number>(typeof window === 'undefined' ? 1024 : window.innerWidth);
+  protected readonly viewportWidth = signal<number>(
+    typeof window === 'undefined' ? 1024 : window.innerWidth,
+  );
 
   /** Tamanho do card: 250×112 no desktop, 180×96 em telas finas. */
   protected readonly nodeW = computed(() => (this.viewportWidth() <= 640 ? 180 : NODE_WIDTH));
@@ -332,6 +357,12 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
     this.showSettings.set(false);
   }
 
+  /** Exportar: emite para a página e fecha o sheet (feedback de conclusão). */
+  protected requestExport(): void {
+    this.exportRequested.emit();
+    this.closeSettings();
+  }
+
   constructor() {
     effect(() => {
       const layout = this.layout();
@@ -356,6 +387,7 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
     this.onResize();
     window.addEventListener('resize', this.onResize);
     this.destroyRef.onDestroy(() => window.removeEventListener('resize', this.onResize));
+    this.destroyRef.onDestroy(() => this.clearClickSwallow());
     this.setupZoom();
     this.observeFullscreen();
 
@@ -376,8 +408,8 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
     return linkValidationLabel(node.validation, this.i18n.lang());
   }
 
-  protected readonly selectedNode = computed(() =>
-    this.nodes().find((node) => node.code === this.selectedCode()) ?? null,
+  protected readonly selectedNode = computed(
+    () => this.nodes().find((node) => node.code === this.selectedCode()) ?? null,
   );
 
   /** Quem criou itens nesta árvore (nome + quantos itens), do maior para o menor. */
@@ -399,12 +431,10 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   });
 
-  /** Rótulo do botão flutuante de criar filho do item selecionado. */
-  protected addLabel(): string {
-    const node = this.selectedNode();
-    return this.i18n.t(node?.type === 'Problem' ? 'canvas.ghostSolution' : 'canvas.ghostBranch');
+  /** Rótulo do "+" de continuidade em nós folha (depende do tipo do pai). */
+  protected childLabel(node: LinkResult): string {
+    return this.i18n.t(node.type === 'Problem' ? 'canvas.ghostSolution' : 'canvas.ghostBranch');
   }
-
 
   protected authorName(code: string | null): string {
     if (!code) {
@@ -416,6 +446,44 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
 
   protected shortDate(value: string): string {
     return formatDate(value);
+  }
+
+  /** ⓘ Detalhes: no mobile abre como sessão (diálogo em cheio), como as demais;
+      no desktop mantém o card flutuante sobre o canvas. */
+  protected toggleDetails(): void {
+    if (this.compactQuery?.matches && this.rootNode()) {
+      void this.openTreeInfo();
+      return;
+    }
+
+    this.showDetails.set(!this.showDetails());
+  }
+
+  private async openTreeInfo(): Promise<void> {
+    const root = this.rootNode();
+
+    if (!root) {
+      return;
+    }
+
+    const ref = this.dialogs.open<boolean, TreeInfoDialogData>(TreeInfoDialogComponent, {
+      data: {
+        root,
+        teamName: this.teamName(),
+        meta: `${this.authorName(root.autorCode)} · ${this.shortDate(root.creationDate)}`,
+        contributors: this.contributors(),
+      },
+      width: '480px',
+      /* Sessão em cheio na horizontal no mobile (≤640px), como as demais
+         sessões; os forms continuam com os 8px de gutter (ver _base.scss). */
+      panelClass: ['bs-dialog-panel', 'bs-dialog-full'],
+    });
+
+    const goTeam = await firstValueFrom(ref.closed);
+
+    if (goTeam) {
+      this.teamRequested.emit();
+    }
   }
 
   protected metaLine(node: LinkResult): string {
@@ -577,18 +645,25 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
 
     // Telas finas: nunca encolher a ponto de ilegível — abre no tamanho
     // mínimo de leitura e centraliza na raiz (o resto se arrasta/pinça).
-    const scale = narrow
-      ? Math.min(1, Math.max(fit, 0.6))
-      : Math.min(1.1, Math.max(0.2, fit));
+    const scale = narrow ? Math.min(1, Math.max(fit, 0.6)) : Math.min(1.1, Math.max(0.2, fit));
 
     if (narrow) {
       const root = layout.nodes.find((item) => item.depth === 0) ?? layout.nodes[0];
+
       if (!root) {
         return;
       }
+
+      // Mobile usa a largura toda: escala até a árvore preencher as laterais
+      // (piso de leitura de 0.6) e centraliza na horizontal — nada de sobra
+      // de um lado só. A raiz fica no terço superior; descendentes correm
+      // para baixo (rolagem/pinça para o resto).
+      const widthFit = (rect.width - 32) / Math.max(layout.width, 1);
+      const scale = Math.min(1, Math.max(widthFit, 0.6));
+
       this.animateTo({
-        x: rect.width * 0.38 - root.cx * scale,
-        y: rect.height * 0.42 - root.cy * scale,
+        x: (rect.width - layout.width * scale) / 2,
+        y: rect.height * 0.3 - root.cy * scale,
         k: scale,
       });
       return;
@@ -685,7 +760,8 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
       window.removeEventListener('pointercancel', onUp);
 
       if (moved) {
-        this.ignoreNextClick = true;
+        // Arrastou o minimapa: consome o click nativo em seguida.
+        this.swallowNextClick();
       } else {
         // Clique sem arrastar: centra o mapa no ponto clicado (estilo FamilySearch).
         const geom = this.minimapViewport();
@@ -768,6 +844,33 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
     });
   }
 
+  /** Consome o próximo click no documento (capture). One-shot: sai no primeiro
+   *  click ou no próximo pointerdown (gesto novo). Motivo: a seleção acontece no
+   *  pointerup → o sheet do nó abre ANTES do click nativo; sem o swallow, o
+   *  click acerta o scrim do painel (cobre a tela toda no mobile) e fecha o que
+   *  acabou de abrir. */
+  private swallowNextClick(): void {
+    this.clearClickSwallow();
+
+    const swallow = (event: MouseEvent): void => {
+      event.stopPropagation();
+      this.clearClickSwallow();
+    };
+    const clearOnNextDown = (): void => this.clearClickSwallow();
+
+    document.addEventListener('click', swallow, true);
+    document.addEventListener('pointerdown', clearOnNextDown, true);
+    this.clickSwallow = { swallow, clearOnNextDown };
+  }
+
+  private clearClickSwallow(): void {
+    if (this.clickSwallow) {
+      document.removeEventListener('click', this.clickSwallow.swallow, true);
+      document.removeEventListener('pointerdown', this.clickSwallow.clearOnNextDown, true);
+      this.clickSwallow = null;
+    }
+  }
+
   private setupZoom(): void {
     const element = this.canvas()?.nativeElement;
 
@@ -779,28 +882,36 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
       const target = event.target as HTMLElement | null;
       return Boolean(
         target?.closest(
-          '.canvas__toolbar, .canvas__details, .canvas__settings, .canvas__minimap-wrap',
+          '.canvas__toolbar, .canvas__details, .canvas__settings, .canvas__minimap-wrap, .canvas__bar',
         ),
       );
     };
 
+    /** Toque desliza mais que o mouse: limiar de pan por tipo de ponteiro. */
+    const tapLimit = (event: PointerEvent): number => (event.pointerType === 'mouse' ? 4 : 10);
+    const isInteractive = (target: EventTarget | null): boolean =>
+      target instanceof Element && Boolean(target.closest('button, a, input, select, textarea'));
+
     // Multi-toque: 1 dedo = pan, 2 dedos = pinch (zoom + pan pelo ponto médio).
     const pointers = new Map<number, { x: number; y: number }>();
     let pinch: { lastDist: number } | null = null;
+    let multiTouch = false;
 
     element.addEventListener('pointerdown', (event) => {
-      if (event.button !== 0 || overUi(event)) {
+      if (event.button !== 0 || overUi(event) || isInteractive(event.target)) {
         return;
       }
 
       // Sem setPointerCapture: capture redireciona o evento `click` para o canvas
       // e o card nunca recebe o clique (painel não abria). Pan via listeners na window.
+      this.clearClickSwallow();
       this.panToken += 1;
       pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
 
       if (pointers.size === 2) {
         const [a, b] = [...pointers.values()];
         pinch = { lastDist: Math.hypot(b!.x - a!.x, b!.y - a!.y) };
+        multiTouch = true;
         this.panState = null;
       } else {
         const pan = {
@@ -809,6 +920,9 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
           origX: this.transform().x,
           origY: this.transform().y,
           moved: false,
+          limit: tapLimit(event),
+          downTime: performance.now(),
+          downTarget: event.target as HTMLElement | null,
         };
         this.panState = pan;
 
@@ -844,7 +958,7 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
           const dx = moveEvent.clientX - pan.startX;
           const dy = moveEvent.clientY - pan.startY;
 
-          if (!pan.moved && Math.abs(dx) + Math.abs(dy) > 4) {
+          if (!pan.moved && Math.abs(dx) + Math.abs(dy) > pan.limit) {
             pan.moved = true;
           }
 
@@ -865,10 +979,25 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
             window.removeEventListener('pointerup', onUp);
             window.removeEventListener('pointercancel', onUp);
 
-            if (pan.moved) {
-              this.ignoreNextClick = true;
+            if (pan.moved || multiTouch) {
+              // Arrastou/pinch: o click nativo em seguida é lixo — consome-o.
+              this.swallowNextClick();
+            } else {
+              // Toque em um card: seleciona direto no pointerup. O clique nativo
+              // em telas de toque sumia quando o dedo deslizava 5px (virava "pan"
+              // com o limiar antigo de 4px) — daí o "clicar duas vezes".
+              const card = pan.downTarget?.closest('.tree-node');
+              const code = card?.getAttribute('data-code') ?? null;
+
+              if (code && performance.now() - pan.downTime <= 500) {
+                // O click nativo vindo aí não pode alcançar nem o card (dupla
+                // emissão) nem o scrim do sheet (fecharia o que abriu).
+                this.swallowNextClick();
+                this.nodeSelected.emit(code);
+              }
             }
 
+            multiTouch = false;
             this.panState = null;
           }
         };
@@ -878,17 +1007,6 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
         window.addEventListener('pointercancel', onUp);
       }
     });
-
-    element.addEventListener(
-      'click',
-      (event) => {
-        if (this.ignoreNextClick) {
-          this.ignoreNextClick = false;
-          event.stopPropagation();
-        }
-      },
-      true,
-    );
 
     element.addEventListener(
       'wheel',

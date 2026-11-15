@@ -239,15 +239,217 @@
   border-top: 1px solid var(--line);
 }
 
+/* Ações da página na barra inferior só no mobile (≤640px); no desktop as
+   ações moram no cabeçalho (pageActions). */
+.detail__bar {
+  display: none;
+}
+
+/* ⚙ Ajustes ao lado do título: só no mobile (≤960px), onde a coluna lateral
+   vira sessão. Desktop não precisa (a coluna está sempre visível). */
+.team__gear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  margin-left: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--card);
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease);
+}
+
+.team__gear:hover {
+  color: var(--tink);
+  border-color: var(--teal);
+}
+
+@media (min-width: 961px) {
+  .team__gear {
+    display: none;
+  }
+}
+
+/* Sessão de ajustes: cabeçalho e scrim só existem no mobile. */
+.detail__scrim,
+.detail__side-head {
+  display: none;
+}
+
 @media (max-width: 960px) {
   .detail {
     grid-template-columns: 1fr;
+  }
+
+  /* A coluna lateral (nome + membros) vira sessão no padrão do painel do
+     nó: bottom sheet 78dvh, alça, scrim e cabeçalho próprio com ✕. */
+  .detail__side {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    height: min(78dvh, 860px);
+    min-height: 320px;
+    border: 0;
+    border-radius: 12px 12px 0 0;
+    background: var(--card);
+    transform: translateY(103%);
+    visibility: hidden;
+    transition:
+      transform var(--duration) var(--ease),
+      height var(--duration) var(--ease);
+  }
+
+  .detail__side--open {
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  /* Rolar para baixo dentro da sessão → ocupa a tela inteira (padrão do
+     painel do nó). Só volta fechando/reabrindo. */
+  .detail__side--expanded {
+    height: 100dvh;
+    border-radius: 0;
+  }
+
+  .detail__side--expanded::before {
+    opacity: 0;
+  }
+
+  /* alça do bottom sheet (estilo FamilySearch) */
+  .detail__side::before {
+    content: "";
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 44px;
+    height: 5px;
+    border-radius: 99px;
+    background: var(--muted);
+    transform: translateX(-50%);
+  }
+
+  .detail__side-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding: var(--space-5) var(--space-4) var(--space-3);
+    border-bottom: 1px solid var(--line);
+  }
+
+  /* Título no padrão das demais sessões (DialogShell): calmo, xl/500. */
+  .detail__side-head h2 {
+    font-family: var(--font-sans);
+    font-size: var(--text-xl);
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--ink);
+  }
+
+  /* ✕ no padrão do shell de diálogo/painel (appButton text + mesma margem). */
+  .detail__side-close {
+    margin: -4px -8px 0 0;
+    color: var(--muted);
+  }
+
+  .detail__side-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--space-4) var(--space-4) calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Na sessão o eyebrow "Nome da equipe" duplica o rótulo do campo — fora
+     (desktop mantém a seção como está). */
+  .detail__side .team-name-block .section-head {
+    display: none;
+  }
+
+  /* Sessão mais limpa (menos linhas): o cartão dos membros vira conteúdo
+     plano (sem caixa dentro da caixa), o título MEMBRES perde a régua e os
+     separadores ficam só ENTRE membros — sem régua duplicada embaixo do
+     título e sem régua no bloco de salvar. */
+  .detail__side app-card.card {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .detail__side .section-head {
+    margin-bottom: var(--space-3);
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .detail__side .member {
+    border-top: 0;
+  }
+
+  .detail__side .member + .member {
+    border-top: 1px solid var(--line);
+  }
+
+  .detail__side .team-save {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .detail__scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    display: block;
+    border: 0;
+    background: var(--overlay);
+    cursor: pointer;
   }
 }
 
 @media (max-width: 640px) {
   .detail {
     gap: var(--space-5);
+  }
+
+  /* Barra inferior fixa com as ações da página (voltar · criar problema),
+     mesma linguagem da barra do canvas: --card, borda no topo e safe-area.
+     Voltar fica com 1/3 à esquerda e o primário (filled) 2/3 à direita. */
+  .detail__bar {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    display: flex;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
+    background: var(--card);
+    border-top: 1px solid var(--line);
+  }
+
+  .detail__bar > .bs-button {
+    flex: 1 1 0;
+    min-height: 44px;
+  }
+
+  .detail__bar > .bs-button:last-child {
+    flex: 2 1 0;
+  }
+
+  /* O conteúdo precisa de respiro para não ficar por trás da barra. */
+  :host {
+    padding-bottom: calc(var(--space-16) + env(safe-area-inset-bottom, 0px));
   }
 
   /* cartões em coluna única, título menor e respiro reduzido */
@@ -268,16 +470,20 @@
     flex-wrap: wrap;
   }
 
-  /* membro: papel e seletor quebram para a linha de baixo em telas finas */
+  /* membro: cópia em linha própria; papel + ✕ dividem a linha de baixo
+     (sem ✕ órfão numa linha sozinho) */
   .member {
     flex-wrap: wrap;
     row-gap: var(--space-2);
   }
 
-  .member__role {
+  .member__copy {
     flex: 1 1 100%;
+  }
+
+  .member__role {
+    flex: 1 1 auto;
     margin-left: 0;
-    justify-content: space-between;
   }
 
   .member__select {

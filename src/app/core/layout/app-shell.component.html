@@ -26,11 +26,19 @@
 
         <div class="shell__actions">
           <button
-            class="shell__user"
+            class="shell__user shell__lang"
             type="button"
             [cdkMenuTriggerFor]="langMenu"
             [attr.aria-label]="'shell.language' | translate"
             aria-haspopup="menu">
+            <app-icon name="translate" [size]="17" />
+          </button>
+          <!-- Mobile (≤640px): abre a sessão de idioma em vez do popup. -->
+          <button
+            class="shell__user shell__lang-mobile"
+            type="button"
+            (click)="openLanguage()"
+            [attr.aria-label]="'shell.language' | translate">
             <app-icon name="translate" [size]="17" />
           </button>
           <ng-template #langMenu>

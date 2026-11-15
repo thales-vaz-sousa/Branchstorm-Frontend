@@ -68,16 +68,31 @@
     bottom: 0;
     top: auto;
     width: auto;
-    height: min(64vh, 580px);
+    /* Sessão alta por padrão (espaço para ler); rolar para baixo expande
+       para a tela inteira (veja --expanded). */
+    height: min(78dvh, 860px);
     min-height: 320px;
     padding: 0;
     background: transparent;
     border: 0;
     transform: translateY(103%);
+    transition:
+      transform var(--duration) var(--ease),
+      height var(--duration) var(--ease);
   }
 
   .workspace__panel--open {
     transform: translateY(0);
+  }
+
+  /* Rolar para baixo dentro da sessão → ocupa a tela inteira. */
+  .workspace__panel--expanded {
+    height: 100dvh;
+    border-radius: 0;
+  }
+
+  .workspace__panel--expanded::before {
+    opacity: 0;
   }
 
   /* alça do bottom sheet (estilo FamilySearch) */
@@ -97,13 +112,6 @@
 
   .workspace__panel--open::before {
     opacity: 1;
-  }
-
-  .workspace__panel app-node-detail-panel .panel {
-    border-right: 0;
-    border-bottom: 0;
-    border-left: 0;
-    border-radius: 14px 14px 0 0;
   }
 
   .workspace__scrim {

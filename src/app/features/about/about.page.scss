@@ -15,6 +15,16 @@
   margin: 0 auto;
 }
 
+/* Mobile: o main tem só 20px de padding-top (não os 32px do desktop), então a
+   margem negativa de -32px empurrava a foto 12px para trás do cabeçalho e o
+   aviso de demonstração parecia escrito dentro dela. No mobile a foto começa
+   no mesmo alinhamento do conteúdo das outras páginas. */
+@media (max-width: 720px) {
+  .banner {
+    margin-top: 0;
+  }
+}
+
 /* Tronco central que cresce com o scroll (--h) ---------------------------- */
 .trunk {
   --h: 100%;

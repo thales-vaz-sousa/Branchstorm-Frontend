@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, input, model } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, model, viewChild } from '@angular/core';
+import type { ElementRef } from '@angular/core';
 
 export interface TabItem {
   readonly id: string;
@@ -10,7 +11,7 @@ export interface TabItem {
   selector: 'app-tabs',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="tabs" role="tablist">
+    <div #row class="tabs" role="tablist">
       @for (tab of tabs(); track tab.id; let index = $index) {
         <button
           class="tabs__tab"
@@ -38,7 +39,9 @@ export interface TabItem {
 
       .tabs {
         display: flex;
-        gap: var(--space-4);
+        gap: var(--space-6);
+        /* Respiro nas pontas: alinhado com o gutter do cabeçalho/corpo. */
+        padding-inline: var(--space-5);
         border-bottom: 1px solid var(--line);
         overflow-x: auto;
         scrollbar-width: none;
@@ -97,8 +100,26 @@ export class TabsComponent {
   readonly tabs = input.required<readonly TabItem[]>();
   readonly active = model.required<string>();
 
+  private readonly row = viewChild.required<ElementRef<HTMLDivElement>>('row');
+
   protected select(id: string): void {
     this.active.set(id);
+    this.centerActive(id);
+  }
+
+  /** Desliza a aba ativa para o centro da linha: em telas estreitas a fileira
+      rola na horizontal (toque) e abas parcialmente visíveis ficam alcançáveis. */
+  private centerActive(id: string): void {
+    const row = this.row().nativeElement;
+    const button = row.querySelector<HTMLButtonElement>(`[id="tab-${id}"]`);
+
+    if (!button) {
+      return;
+    }
+
+    const target = button.offsetLeft - (row.clientWidth - button.offsetWidth) / 2;
+
+    row.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
   }
 
   protected onKeydown(event: KeyboardEvent, index: number): void {
@@ -125,6 +146,7 @@ export class TabsComponent {
     }
 
     this.active.set(tab.id);
-    document.getElementById('tab-' + tab.id)?.focus();
+    this.centerActive(tab.id);
+    document.getElementById('tab-' + tab.id)?.focus({ preventScroll: true });
   }
 }

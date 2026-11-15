@@ -133,6 +133,22 @@
   letter-spacing: 0.02em;
 }
 
+/* Idioma: menu popup no desktop; no mobile (≤640px) o botão abre a sessão de
+   idioma (bottom sheet), no padrão das demais sessões. Troca só via CSS. */
+.shell__lang-mobile {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .shell__lang {
+    display: none;
+  }
+
+  .shell__lang-mobile {
+    display: inline-flex;
+  }
+}
+
 .shell__progress {
   position: relative;
   height: 2px;
@@ -237,11 +253,20 @@
   .shell__nav {
     order: 3;
     flex-basis: 100%;
-    gap: var(--space-4);
     overflow-x: auto;
   }
 
-  .shell__main {
+  /* Nav em duas metades iguais (50/50), como o segmented control do canvas:
+     cada link ocupa metade da linha, rótulo centrado, underline na metade. */
+  .shell__link {
+    flex: 1;
+    text-align: center;
+  }
+
+  /* Respiro do conteúdo no mobile — mas NUNCA na rota da árvore (o mapa é
+     full-bleed em todas as larguras; regra mais tardia aqui venceria o
+     padding: 0 do .shell__main--tree e morderia o canvas). */
+  .shell__main:not(.shell__main--tree) {
     padding-top: var(--space-5);
   }
 }
@@ -255,7 +280,9 @@
     gap: var(--space-1);
   }
 
-  .shell__main {
+  /* idem: sem padding lateral no mapa full-bleed — era isso que recortava a
+     barra do canvas das bordas e cortava os cards em ≤400px. */
+  .shell__main:not(.shell__main--tree) {
     padding-inline: var(--space-3);
   }
 }
