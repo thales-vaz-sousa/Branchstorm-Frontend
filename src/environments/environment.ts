@@ -11,5 +11,8 @@ export const environment: AppEnvironment = {
   appName: 'Branchstorm',
   apiUrl: 'https://api.branchstorm.tech',
   docsUrl: 'https://docs.branchstorm.tech',
-  useMocks: false,
+  // Temporário: até o gateway sair do spin-down, o site usa o mock no navegador
+  // (faixa "Modo demonstração" fica visível). Voltar para false quando o
+  // back-end estiver no ar em https://api.branchstorm.tech.
+  useMocks: true,
 };

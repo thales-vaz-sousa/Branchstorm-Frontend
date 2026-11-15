@@ -53,12 +53,34 @@ import { IconComponent } from '../icon/icon.component';
         flex-direction: column;
         width: 100%;
         max-height: min(86vh, 760px);
+        max-height: min(86dvh, 760px);
         background: var(--card);
         border: 1px solid var(--line);
-        border-bottom: 0;
-        border-radius: 12px 12px 0 0;
+        border-radius: 12px;
+        box-shadow: var(--dialog-shadow);
         overflow: hidden;
-        animation: bs-sheet-in 180ms var(--ease);
+        animation: bs-dialog-in 180ms var(--ease);
+      }
+
+      @keyframes bs-dialog-in {
+        from {
+          opacity: 0;
+          transform: translateY(12px) scale(0.98);
+        }
+
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .dialog {
+          border-bottom: 0;
+          border-radius: 12px 12px 0 0;
+          box-shadow: none;
+          animation-name: bs-sheet-in;
+        }
       }
 
       @keyframes bs-sheet-in {
@@ -122,6 +144,27 @@ import { IconComponent } from '../icon/icon.component';
         gap: var(--space-2);
         padding: var(--space-4) var(--space-6);
         border-top: 1px solid var(--line);
+      }
+
+      /* Mobile: form usa quase toda a largura — respiro horizontal de 16px,
+         confirmar com folga da safe area. */
+      @media (max-width: 640px) {
+        .dialog {
+          max-height: min(88dvh, 760px);
+        }
+
+        .dialog__head {
+          padding: var(--space-4) var(--space-4) var(--space-3);
+        }
+
+        .dialog__body {
+          padding: var(--space-4) var(--space-4);
+        }
+
+        .dialog__foot {
+          padding: var(--space-3) var(--space-4);
+          padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+        }
       }
     `,
   ],

@@ -80,6 +80,8 @@ describe('IdeaTreeCanvas pan/zoom', () => {
       new MouseEvent('pointermove', { bubbles: true, clientX: 380, clientY: 340 }),
     );
     canvas.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+    // o navegador sempre despacha um click após o drag — aqui ele é engolido
+    canvas.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     fixture.detectChanges();
 
     expect(transformOf()).not.toBe(before);
@@ -227,6 +229,99 @@ describe('IdeaTreeCanvas pan/zoom', () => {
     expect(emitted).toEqual(['SOL-2']);
   });
 
+  it('selects on pointerup alone (one tap opens the node — mobile click loss fix)', () => {
+    const emitted: string[] = [];
+    component.nodeSelected.subscribe((code) => emitted.push(code));
+
+    const card = canvas.querySelector('[data-code="SOL-2"]') as HTMLElement;
+    card.dispatchEvent(
+      new MouseEvent('pointerdown', { bubbles: true, clientX: 300, clientY: 300, button: 0 }),
+    );
+    card.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+    // o click nativo vem depois da seleção (o sheet já abriu) — deve ser engolido
+    card.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(emitted).toEqual(['SOL-2']);
+  });
+
+  it('the native click after a tap-selection cannot reach the panel scrim (open/close race)', () => {
+    const emitted: string[] = [];
+    component.nodeSelected.subscribe((code) => emitted.push(code));
+
+    let scrimClicks = 0;
+    const scrim = document.createElement('button');
+    scrim.addEventListener('click', () => {
+      scrimClicks += 1;
+    });
+    document.body.appendChild(scrim);
+
+    try {
+      const card = canvas.querySelector('[data-code="SOL-2"]') as HTMLElement;
+      card.dispatchEvent(
+        new MouseEvent('pointerdown', { bubbles: true, clientX: 300, clientY: 300, button: 0 }),
+      );
+      card.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+      fixture.detectChanges();
+
+      // Com o sheet aberto, o scrim (fixed, tela toda) fica sob o dedo quando o
+      // click nativo é despachado — ele deve ser consumido no capture do document.
+      scrim.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      fixture.detectChanges();
+
+      expect(emitted).toEqual(['SOL-2']); // selecionou uma única vez
+      expect(scrimClicks).toBe(0); // e o scrim não fechou o que abriu
+    } finally {
+      scrim.remove();
+    }
+  });
+
+  it('still selects when the finger slides a little (touch slop > old 4px threshold)', () => {
+    const emitted: string[] = [];
+    component.nodeSelected.subscribe((code) => emitted.push(code));
+
+    const card = canvas.querySelector('[data-code="SOL-2"]') as HTMLElement;
+    card.dispatchEvent(
+      new MouseEvent('pointerdown', { bubbles: true, clientX: 300, clientY: 300, button: 0 }),
+    );
+    // 5px na horizontal + 4px na vertical = 9px: era "pan" no limiar antigo (4px)
+    card.dispatchEvent(
+      new MouseEvent('pointermove', { bubbles: true, clientX: 305, clientY: 304 }),
+    );
+    card.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+    card.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(emitted).toEqual(['SOL-2']);
+    // e o mapa não deve ter se mexido com esse deslize miúdo
+    expect(transformOf()).toContain('translate(0px, 0px)');
+  });
+
+  it('leaf cards show a "+" continuation button that requests a child', async () => {
+    fixture.componentRef.setInput(
+      'childrenByFather',
+      new Map([['ROOT-1', [NODES[1]!, NODES[2]!] as readonly LinkResult[]]]),
+    );
+    fixture.componentRef.setInput('childCounts', new Map([['ROOT-1', 2]]));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const requested: string[] = [];
+    component.createChildRequested.subscribe((code) => requested.push(code));
+
+    const leaf = canvas.querySelector('[data-code="SOL-1"] .tree-node__add') as HTMLElement;
+    const parent = canvas.querySelector('[data-code="ROOT-1"] .tree-node__add');
+
+    expect(leaf).toBeTruthy(); // folha → tem "+"
+    expect(parent).toBeNull(); // nó com filhos → não tem (evita poluir)
+
+    leaf.click();
+    fixture.detectChanges();
+
+    expect(requested).toEqual(['SOL-1']);
+  });
+
   it('spaces siblings without overlap (root + 4 solutions)', async () => {
     const nodes = [
       node('ROOT-1', null, 'Problema raiz'),
@@ -252,9 +347,52 @@ describe('IdeaTreeCanvas pan/zoom', () => {
 
     expect(ys).toHaveLength(4);
     for (let i = 1; i < ys.length; i += 1) {
-      // card tem 112px de altura; irmãos precisam de >= 140px (28px de vão)
-      expect(ys[i]! - ys[i - 1]!).toBeGreaterThanOrEqual(140);
+      // card tem 148px de altura; irmãos precisam de >= 176px (148 + 28 de vão)
+      expect(ys[i]! - ys[i - 1]!).toBeGreaterThanOrEqual(184);
     }
+  });
+
+  it('keeps a three-level tree from overlapping cards (fixed card height)', async () => {
+    const deep = [
+      node('ROOT-1', null, 'Problema raiz'),
+      node('SOL-1', 'ROOT-1', 'Solução um'),
+      node('VER-1', 'SOL-1', 'Versão um'),
+    ];
+    fixture.componentRef.setInput('nodes', deep);
+    fixture.componentRef.setInput(
+      'childrenByFather',
+      new Map([
+        ['ROOT-1', [deep[1]!] as readonly LinkResult[]],
+        ['SOL-1', [deep[2]!] as readonly LinkResult[]],
+      ]),
+    );
+    fixture.componentRef.setInput(
+      'childCounts',
+      new Map([
+        ['ROOT-1', 1],
+        ['SOL-1', 1],
+      ]),
+    );
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const layout = (
+      component as unknown as {
+        layout: () => {
+          nodes: readonly { y: number; h: number; x: number; w: number; node: { code: string } }[];
+        };
+      }
+    ).layout();
+
+    const byCode = new Map(layout.nodes.map((item) => [item.node.code, item]));
+    const root = byCode.get('ROOT-1')!;
+    const solution = byCode.get('SOL-1')!;
+    const version = byCode.get('VER-1')!;
+
+    // Cards com altura/largura fixas não podem se sobrepor (filho começa depois do fim do pai).
+    expect(version.x).toBeGreaterThanOrEqual(solution.x + solution.w);
+    expect(solution.x).toBeGreaterThanOrEqual(root.x + root.w);
   });
 
   it('spaces siblings without overlap in portrait (cards 250px wide)', async () => {

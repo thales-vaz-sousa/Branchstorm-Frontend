@@ -13,6 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { stratify, tree as d3Tree } from 'd3-hierarchy';
+import { firstValueFrom } from 'rxjs';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
 import { ButtonDirective } from '@shared/ui/button/button.directive';
@@ -20,10 +21,12 @@ import { BS_MENU } from '@shared/ui/menu/menu';
 import { CdkMenuTrigger } from '@angular/cdk/menu';
 import type { LinkResult } from '@shared/models/link.model';
 import { findPathToNode } from '@shared/utils/tree.util';
-import { linkTypeLabel, linkValidationLabel } from '@shared/utils/enum.util';
+import { linkTypeLabel } from '@shared/utils/enum.util';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { I18nService } from '@core/i18n/i18n.service';
-import { formatDate } from '@shared/utils/date.util';
+import { formatShortDate } from '@shared/utils/date.util';
+import { DialogService } from '@shared/ui/dialog/dialog.service';
+import { TreeInfoDialogComponent, type TreeInfoDialogData } from './tree-info-dialog.component';
 
 export type TreeLayoutMode = 'landscape' | 'portrait';
 
@@ -35,10 +38,11 @@ export interface TreeStatsView {
   readonly final: number;
 }
 
-const NODE_WIDTH = 250;
-const NODE_HEIGHT = 112;
-const LEVEL_GAP = 80;
-const SIBLING_GAP = 28;
+/** Medidas únicas do card da árvore — fonte única (CSS via --card-*, d3 via nodeSize). */
+const CARD_W = 250;
+const CARD_H = 156;
+const GAP_X = 28;
+const GAP_Y = 80;
 const PADDING = 48;
 
 interface PositionedNode {
@@ -60,20 +64,9 @@ interface PositionedLink {
   readonly active: boolean;
 }
 
-interface GhostSlot {
-  readonly fatherCode: string;
-  readonly x: number;
-  readonly y: number;
-  readonly label: string;
-  readonly cx: number;
-  readonly cy: number;
-}
-
 interface TreeLayoutResult {
   readonly nodes: readonly PositionedNode[];
   readonly links: readonly PositionedLink[];
-  readonly ghost: GhostSlot | null;
-  readonly ghostPath: string | null;
   readonly width: number;
   readonly height: number;
 }
@@ -81,8 +74,6 @@ interface TreeLayoutResult {
 const EMPTY_LAYOUT: TreeLayoutResult = {
   nodes: [],
   links: [],
-  ghost: null,
-  ghostPath: null,
   width: 0,
   height: 0,
 };
@@ -106,6 +97,8 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
   readonly showDiscarded = input(true);
   readonly rootNode = input<LinkResult | null>(null);
   readonly teamName = input('');
+  /** Painel de detalhe aberto: no mobile a barra sai de cena (o sheet ocupa o rodapé). */
+  readonly panelOpen = input(false);
 
   readonly nodeSelected = output<string>();
   readonly collapseToggled = output<string>();
@@ -117,19 +110,37 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
   readonly layoutChange = output<TreeLayoutMode>();
   readonly homeRequested = output<void>();
   readonly teamRequested = output<void>();
+  /** Exportar a árvore: a página (dona do dado completo) resolve o download. */
+  readonly exportRequested = output<void>();
 
   private readonly canvas = viewChild<ElementRef<HTMLElement>>('canvas');
   private readonly layoutTrigger = viewChild(CdkMenuTrigger);
   private readonly destroyRef = inject(DestroyRef);
   private readonly i18n = inject(I18nService);
+  private readonly dialogs = inject(DialogService);
+  /** ≤640px: o ⓘ abre a sessão de infos (diálogo) em vez do card solto. */
+  private readonly compactQuery =
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(max-width: 640px)')
+      : null;
   private panState: {
     readonly startX: number;
     readonly startY: number;
     readonly origX: number;
     readonly origY: number;
     moved: boolean;
+    /** Limiar de pan para este gesto: touch desliza mais que o mouse. */
+    readonly limit: number;
+    readonly downTime: number;
+    readonly downTarget: HTMLElement | null;
   } | null = null;
-  private ignoreNextClick = false;
+  /** Consome o próximo click no documento (capture): após a seleção no pointerup,
+      o sheet abre antes do click nativo ser despachado — sem isso o click acerta
+      o scrim do painel (fora do canvas) e o fecha na sequência. */
+  private clickSwallow: {
+    readonly swallow: (event: MouseEvent) => void;
+    readonly clearOnNextDown: () => void;
+  } | null = null;
   private centeredLayout = '';
   private panToken = 0;
 
@@ -138,6 +149,15 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
   /** Detalhes da árvore começam fechados por padrão. */
   protected readonly showDetails = signal(false);
   protected readonly showMinimap = signal(false);
+  /** Largura do viewport (cards menores em telas finas — mobile). */
+  protected readonly viewportWidth = signal<number>(
+    typeof window === 'undefined' ? 1024 : window.innerWidth,
+  );
+
+  /** Tamanho do card: 180×148 em telas finas, 250×148 no desktop (largura ×
+      altura que comporta 2 linhas de título + autor + pílula). */
+  protected readonly nodeW = computed(() => (this.viewportWidth() <= 640 ? 180 : CARD_W));
+  protected readonly nodeH = computed(() => CARD_H);
 
   /** Minimapa: pontos dos nós + retângulo do viewport no espaço do layout. */
   protected readonly minimapViewport = computed(() => {
@@ -197,12 +217,13 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
               : undefined,
         )([...visible]);
 
-      const treeLayout = d3Tree<LinkResult>().nodeSize(
-        mode === 'portrait'
-          ? // retrato: irmãos lado a lado (precisa do vão da LARGURA do card)
-            [NODE_WIDTH + SIBLING_GAP, NODE_HEIGHT + LEVEL_GAP]
-          : [NODE_HEIGHT + SIBLING_GAP, NODE_WIDTH + LEVEL_GAP],
-      );
+      const w = this.nodeW();
+      const h = this.nodeH();
+      const treeLayout = d3Tree<LinkResult>()
+        .nodeSize(
+          mode === 'portrait' ? [CARD_W + GAP_X, CARD_H + GAP_Y] : [CARD_H + GAP_X, CARD_W + GAP_Y],
+        )
+        .separation((a, b) => (a.parent === b.parent ? 1 : 1.4));
       const root = treeLayout(hierarchy);
       const descendants = root.descendants();
       const minX = Math.min(...descendants.map((item) => item.x));
@@ -215,13 +236,13 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
             node: item.data,
             x: PADDING + (item.x - minX),
             y: PADDING + item.y,
-            w: NODE_WIDTH,
-            h: NODE_HEIGHT,
+            w,
+            h,
             depth: item.depth,
             childrenCount: this.childCounts().get(item.data.code) ?? 0,
             collapsed: this.collapsedCodes().has(item.data.code),
-            cx: PADDING + (item.x - minX) + NODE_WIDTH / 2,
-            cy: PADDING + item.y + NODE_HEIGHT / 2,
+            cx: PADDING + (item.x - minX) + w / 2,
+            cy: PADDING + item.y + h / 2,
           };
         }
 
@@ -229,13 +250,13 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
           node: item.data,
           x: PADDING + item.y,
           y: PADDING + (item.x - minX),
-          w: NODE_WIDTH,
-          h: NODE_HEIGHT,
+          w,
+          h,
           depth: item.depth,
           childrenCount: this.childCounts().get(item.data.code) ?? 0,
           collapsed: this.collapsedCodes().has(item.data.code),
-          cx: PADDING + item.y + NODE_WIDTH / 2,
-          cy: PADDING + (item.x - minX) + NODE_HEIGHT / 2,
+          cx: PADDING + item.y + w / 2,
+          cy: PADDING + (item.x - minX) + h / 2,
         };
       });
 
@@ -278,24 +299,16 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
       let height: number;
 
       if (mode === 'portrait') {
-        width = PADDING * 2 + (maxX - minX) + NODE_WIDTH;
-        height = PADDING * 2 + maxDepth * (NODE_HEIGHT + LEVEL_GAP) + NODE_HEIGHT;
+        width = PADDING * 2 + (maxX - minX) + w;
+        height = PADDING * 2 + maxDepth * (h + GAP_Y) + h;
       } else {
-        width = PADDING * 2 + maxDepth * (NODE_WIDTH + LEVEL_GAP) + NODE_WIDTH;
-        height = PADDING * 2 + (maxX - minX) + NODE_HEIGHT;
-      }
-
-      const ghost = this.buildGhost(positioned, mode);
-      if (ghost) {
-        width = Math.max(width, ghost.slot.x + NODE_WIDTH + PADDING);
-        height = Math.max(height, ghost.slot.y + NODE_HEIGHT + PADDING);
+        width = PADDING * 2 + maxDepth * (w + GAP_Y) + w;
+        height = PADDING * 2 + (maxX - minX) + h;
       }
 
       return {
         nodes: positioned,
         links,
-        ghost: ghost?.slot ?? null,
-        ghostPath: ghost?.path ?? null,
         width,
         height,
       };
@@ -345,6 +358,12 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
     this.showSettings.set(false);
   }
 
+  /** Exportar: emite para a página e fecha o sheet (feedback de conclusão). */
+  protected requestExport(): void {
+    this.exportRequested.emit();
+    this.closeSettings();
+  }
+
   constructor() {
     effect(() => {
       const layout = this.layout();
@@ -366,6 +385,10 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
+    this.onResize();
+    window.addEventListener('resize', this.onResize);
+    this.destroyRef.onDestroy(() => window.removeEventListener('resize', this.onResize));
+    this.destroyRef.onDestroy(() => this.clearClickSwallow());
     this.setupZoom();
     this.observeFullscreen();
 
@@ -374,15 +397,46 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
     }
   }
 
+  private readonly onResize = (): void => {
+    this.viewportWidth.set(window.innerWidth);
+  };
+
   protected typeLabel(node: LinkResult): string {
     return linkTypeLabel(node.type, this.i18n.lang());
   }
 
-  protected validationLabel(node: LinkResult): string {
-    return linkValidationLabel(node.validation, this.i18n.lang());
+  /** Validação no card: "✓ Hipótese validada" (--tink) ou "Hipótese refutada" (--danger). */
+  protected validationHint(node: LinkResult): string {
+    return node.validation === 'Validated'
+      ? this.i18n.t('validation.validatedHint')
+      : this.i18n.t('validation.refutedHint');
   }
 
-  protected ghostLabel(node: LinkResult): string {
+  protected readonly selectedNode = computed(
+    () => this.nodes().find((node) => node.code === this.selectedCode()) ?? null,
+  );
+
+  /** Quem criou itens nesta árvore (nome + quantos itens), do maior para o menor. */
+  protected readonly contributors = computed(() => {
+    const counts = new Map<string, number>();
+
+    for (const node of this.nodes()) {
+      if (node.autorCode) {
+        counts.set(node.autorCode, (counts.get(node.autorCode) ?? 0) + 1);
+      }
+    }
+
+    return [...counts.entries()]
+      .map(([code, count]) => ({
+        code,
+        count,
+        name: this.authors().get(code) ?? this.i18n.t('canvas.authorFallback'),
+      }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  });
+
+  /** Rótulo do "+" de continuidade em nós folha (depende do tipo do pai). */
+  protected childLabel(node: LinkResult): string {
     return this.i18n.t(node.type === 'Problem' ? 'canvas.ghostSolution' : 'canvas.ghostBranch');
   }
 
@@ -395,15 +449,53 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
   }
 
   protected shortDate(value: string): string {
-    return formatDate(value);
+    return formatShortDate(value);
+  }
+
+  /** ⓘ Detalhes: no mobile abre como sessão (diálogo em cheio), como as demais;
+      no desktop mantém o card flutuante sobre o canvas. */
+  protected toggleDetails(): void {
+    if (this.compactQuery?.matches && this.rootNode()) {
+      void this.openTreeInfo();
+      return;
+    }
+
+    this.showDetails.set(!this.showDetails());
+  }
+
+  private async openTreeInfo(): Promise<void> {
+    const root = this.rootNode();
+
+    if (!root) {
+      return;
+    }
+
+    const ref = this.dialogs.open<boolean, TreeInfoDialogData>(TreeInfoDialogComponent, {
+      data: {
+        root,
+        teamName: this.teamName(),
+        meta: `${this.authorName(root.autorCode)} · ${this.shortDate(root.creationDate)}`,
+        contributors: this.contributors(),
+      },
+      width: '480px',
+      /* Sessão em cheio na horizontal no mobile (≤640px), como as demais
+         sessões; os forms continuam com os 8px de gutter (ver _base.scss). */
+      panelClass: ['bs-dialog-panel', 'bs-dialog-full'],
+    });
+
+    const goTeam = await firstValueFrom(ref.closed);
+
+    if (goTeam) {
+      this.teamRequested.emit();
+    }
   }
 
   protected metaLine(node: LinkResult): string {
-    return `${this.authorName(node.autorCode)} · ${this.shortDate(node.creationDate)} · ${node.code.slice(0, 8)}`;
+    return `${this.authorName(node.autorCode)} · ${this.shortDate(node.creationDate)}`;
   }
 
   protected tooltip(node: LinkResult): string {
-    return `${node.title} — ${this.shortDate(node.creationDate)} · ${node.code}`;
+    return `${node.title} · ${this.shortDate(node.creationDate)}`;
   }
 
   protected select(code: string): void {
@@ -549,16 +641,46 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
       return;
     }
 
-    const scale = Math.min(
-      1.1,
-      Math.max(
-        0.2,
-        Math.min(
-          (rect.width - PADDING * 2) / Math.max(layout.width, 1),
-          (rect.height - PADDING * 2) / Math.max(layout.height, 1),
-        ),
-      ),
+    const fit = Math.min(
+      (rect.width - PADDING * 2) / Math.max(layout.width, 1),
+      (rect.height - PADDING * 2) / Math.max(layout.height, 1),
     );
+    const narrow = rect.width <= 640;
+
+    // Telas finas: nunca encolher a ponto de ilegível — abre no tamanho
+    // mínimo de leitura e centraliza na raiz (o resto se arrasta/pinça).
+    const scale = narrow ? Math.min(1, Math.max(fit, 0.6)) : Math.min(1.1, Math.max(0.2, fit));
+
+    if (narrow) {
+      const root = layout.nodes.find((item) => item.depth === 0) ?? layout.nodes[0];
+
+      if (!root) {
+        return;
+      }
+
+      // Mobile usa a largura toda: escala até a árvore preencher as laterais
+      // (piso de leitura de 0.6) e centraliza na horizontal — nada de sobra
+      // de um lado só. A raiz fica no terço superior; descendentes correm
+      // para baixo (rolagem/pinça para o resto).
+      // Mobile: mantém piso de leitura (0.6) e ancora a raiz à esquerda com
+      // respiro quando a árvore não cabe na largura, evitando que a raiz fique
+      // deslocada à direita e os filhos sejam cortados na borda direita.
+      // Se couber, centraliza horizontalmente.
+      const leftPad = 16;
+      const widthFit = (rect.width - leftPad * 2) / Math.max(layout.width, 1);
+      const scale = Math.min(1, Math.max(widthFit, 0.6));
+      const scaledW = layout.width * scale;
+      const x =
+        scaledW <= rect.width - leftPad * 2 ? (rect.width - scaledW) / 2 : leftPad - root.x * scale;
+
+      this.animateTo({
+        x,
+        y: rect.height * 0.3 - root.cy * scale,
+        k: scale,
+      });
+      return;
+    }
+
     this.animateTo({
       x: (rect.width - layout.width * scale) / 2,
       y: (rect.height - layout.height * scale) / 2,
@@ -650,7 +772,8 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
       window.removeEventListener('pointercancel', onUp);
 
       if (moved) {
-        this.ignoreNextClick = true;
+        // Arrastou o minimapa: consome o click nativo em seguida.
+        this.swallowNextClick();
       } else {
         // Clique sem arrastar: centra o mapa no ponto clicado (estilo FamilySearch).
         const geom = this.minimapViewport();
@@ -687,65 +810,6 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
     const tx = target.x;
     const midX = (sx + tx) / 2;
     return `M ${sx} ${source.cy} L ${midX} ${source.cy} L ${midX} ${target.cy} L ${tx} ${target.cy}`;
-  }
-
-  private buildGhost(
-    positioned: readonly PositionedNode[],
-    mode: TreeLayoutMode,
-  ): { slot: GhostSlot; path: string } | null {
-    const selected = this.selectedCode();
-    const anchor =
-      positioned.find((item) => item.node.code === selected) ??
-      positioned.find((item) => item.depth === 0) ??
-      positioned[0];
-
-    if (!anchor) {
-      return null;
-    }
-
-    const label = this.ghostLabel(anchor.node);
-
-    if (mode === 'portrait') {
-      const children = positioned.filter((item) => item.node.fatherCode === anchor.node.code);
-      const x =
-        children.length > 0
-          ? Math.max(...children.map((item) => item.x + item.w)) + SIBLING_GAP
-          : anchor.x;
-      const y = anchor.y + anchor.h + LEVEL_GAP;
-      const midY = (anchor.y + anchor.h + y) / 2;
-      const path = `M ${anchor.cx} ${anchor.y + anchor.h} L ${anchor.cx} ${midY} L ${x + NODE_WIDTH / 2} ${midY} L ${x + NODE_WIDTH / 2} ${y}`;
-      return {
-        slot: {
-          fatherCode: anchor.node.code,
-          x,
-          y,
-          label,
-          cx: x + NODE_WIDTH / 2,
-          cy: y + NODE_HEIGHT / 2,
-        },
-        path,
-      };
-    }
-
-    const children = positioned.filter((item) => item.node.fatherCode === anchor.node.code);
-    const x = anchor.x + anchor.w + LEVEL_GAP;
-    const y =
-      children.length > 0
-        ? Math.max(...children.map((item) => item.y + item.h)) + SIBLING_GAP
-        : anchor.y;
-    const midX = (anchor.x + anchor.w + x) / 2;
-    const path = `M ${anchor.x + anchor.w} ${anchor.cy} L ${midX} ${anchor.cy} L ${midX} ${y + NODE_HEIGHT / 2} L ${x} ${y + NODE_HEIGHT / 2}`;
-    return {
-      slot: {
-        fatherCode: anchor.node.code,
-        x,
-        y,
-        label,
-        cx: x + NODE_WIDTH / 2,
-        cy: y + NODE_HEIGHT / 2,
-      },
-      path,
-    };
   }
 
   private observeFullscreen(): void {
@@ -792,6 +856,33 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
     });
   }
 
+  /** Consome o próximo click no documento (capture). One-shot: sai no primeiro
+   *  click ou no próximo pointerdown (gesto novo). Motivo: a seleção acontece no
+   *  pointerup → o sheet do nó abre ANTES do click nativo; sem o swallow, o
+   *  click acerta o scrim do painel (cobre a tela toda no mobile) e fecha o que
+   *  acabou de abrir. */
+  private swallowNextClick(): void {
+    this.clearClickSwallow();
+
+    const swallow = (event: MouseEvent): void => {
+      event.stopPropagation();
+      this.clearClickSwallow();
+    };
+    const clearOnNextDown = (): void => this.clearClickSwallow();
+
+    document.addEventListener('click', swallow, true);
+    document.addEventListener('pointerdown', clearOnNextDown, true);
+    this.clickSwallow = { swallow, clearOnNextDown };
+  }
+
+  private clearClickSwallow(): void {
+    if (this.clickSwallow) {
+      document.removeEventListener('click', this.clickSwallow.swallow, true);
+      document.removeEventListener('pointerdown', this.clickSwallow.clearOnNextDown, true);
+      this.clickSwallow = null;
+    }
+  }
+
   private setupZoom(): void {
     const element = this.canvas()?.nativeElement;
 
@@ -803,28 +894,36 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
       const target = event.target as HTMLElement | null;
       return Boolean(
         target?.closest(
-          '.canvas__toolbar, .canvas__details, .canvas__settings, .canvas__minimap-wrap',
+          '.canvas__toolbar, .canvas__details, .canvas__settings, .canvas__minimap-wrap, .canvas__bar',
         ),
       );
     };
 
+    /** Toque desliza mais que o mouse: limiar de pan por tipo de ponteiro. */
+    const tapLimit = (event: PointerEvent): number => (event.pointerType === 'mouse' ? 4 : 10);
+    const isInteractive = (target: EventTarget | null): boolean =>
+      target instanceof Element && Boolean(target.closest('button, a, input, select, textarea'));
+
     // Multi-toque: 1 dedo = pan, 2 dedos = pinch (zoom + pan pelo ponto médio).
     const pointers = new Map<number, { x: number; y: number }>();
     let pinch: { lastDist: number } | null = null;
+    let multiTouch = false;
 
     element.addEventListener('pointerdown', (event) => {
-      if (event.button !== 0 || overUi(event)) {
+      if (event.button !== 0 || overUi(event) || isInteractive(event.target)) {
         return;
       }
 
       // Sem setPointerCapture: capture redireciona o evento `click` para o canvas
       // e o card nunca recebe o clique (painel não abria). Pan via listeners na window.
+      this.clearClickSwallow();
       this.panToken += 1;
       pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
 
       if (pointers.size === 2) {
         const [a, b] = [...pointers.values()];
         pinch = { lastDist: Math.hypot(b!.x - a!.x, b!.y - a!.y) };
+        multiTouch = true;
         this.panState = null;
       } else {
         const pan = {
@@ -833,6 +932,9 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
           origX: this.transform().x,
           origY: this.transform().y,
           moved: false,
+          limit: tapLimit(event),
+          downTime: performance.now(),
+          downTarget: event.target as HTMLElement | null,
         };
         this.panState = pan;
 
@@ -868,7 +970,7 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
           const dx = moveEvent.clientX - pan.startX;
           const dy = moveEvent.clientY - pan.startY;
 
-          if (!pan.moved && Math.abs(dx) + Math.abs(dy) > 4) {
+          if (!pan.moved && Math.abs(dx) + Math.abs(dy) > pan.limit) {
             pan.moved = true;
           }
 
@@ -889,10 +991,25 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
             window.removeEventListener('pointerup', onUp);
             window.removeEventListener('pointercancel', onUp);
 
-            if (pan.moved) {
-              this.ignoreNextClick = true;
+            if (pan.moved || multiTouch) {
+              // Arrastou/pinch: o click nativo em seguida é lixo — consome-o.
+              this.swallowNextClick();
+            } else {
+              // Toque em um card: seleciona direto no pointerup. O clique nativo
+              // em telas de toque sumia quando o dedo deslizava 5px (virava "pan"
+              // com o limiar antigo de 4px) — daí o "clicar duas vezes".
+              const card = pan.downTarget?.closest('.tree-node');
+              const code = card?.getAttribute('data-code') ?? null;
+
+              if (code && performance.now() - pan.downTime <= 500) {
+                // O click nativo vindo aí não pode alcançar nem o card (dupla
+                // emissão) nem o scrim do sheet (fecharia o que abriu).
+                this.swallowNextClick();
+                this.nodeSelected.emit(code);
+              }
             }
 
+            multiTouch = false;
             this.panState = null;
           }
         };
@@ -902,17 +1019,6 @@ export class IdeaTreeCanvasComponent implements AfterViewInit {
         window.addEventListener('pointercancel', onUp);
       }
     });
-
-    element.addEventListener(
-      'click',
-      (event) => {
-        if (this.ignoreNextClick) {
-          this.ignoreNextClick = false;
-          event.stopPropagation();
-        }
-      },
-      true,
-    );
 
     element.addEventListener(
       'wheel',

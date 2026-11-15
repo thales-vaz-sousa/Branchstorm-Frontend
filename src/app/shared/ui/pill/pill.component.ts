@@ -1,13 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-export type PillTone =
-  | 'open'
-  | 'selected'
-  | 'discarded'
-  | 'final'
-  | 'neutral'
-  | 'soft'
-  | 'danger';
+export type PillTone = 'open' | 'selected' | 'discarded' | 'final' | 'neutral' | 'soft' | 'danger';
 
 @Component({
   selector: 'app-pill',
@@ -29,13 +22,16 @@ export type PillTone =
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 3px 10px;
+        height: 22px;
+        padding: 0 10px;
         border: 1px solid transparent;
-        border-radius: var(--radius-pill);
+        /* Badges como "chips" retangulares (menos arredondados), na família
+           dos cards do canvas. */
+        border-radius: var(--radius-control);
         font-family: var(--font-sans);
         font-size: var(--text-xs);
         font-weight: 500;
-        line-height: 1.4;
+        line-height: 1.2;
         white-space: nowrap;
       }
 
@@ -51,6 +47,9 @@ export type PillTone =
 
       :host(.pill--discarded) {
         border-color: var(--line);
+        /* Descartado = tracejado, como os cards descartados do canvas
+           (tree-node--discarded). */
+        border-style: dashed;
         color: var(--muted);
       }
 

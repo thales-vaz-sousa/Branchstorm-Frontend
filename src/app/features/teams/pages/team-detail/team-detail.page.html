@@ -6,38 +6,86 @@
   <app-empty-state
     icon="message"
     [title]="'detail.notFound.title' | translate"
-    [description]="'detail.notFound.desc' | translate"
-  >
+    [description]="'detail.notFound.desc' | translate">
     <a appButton variant="outline" routerLink="/equipes">{{ 'ws.backTeams' | translate }}</a>
   </app-empty-state>
 } @else if (team(); as currentTeam) {
+  <a class="detail__back" routerLink="/equipes">
+    <app-icon name="chevron" [rotate]="180" [size]="14" />
+    {{ 'nav.teams' | translate }}
+  </a>
+
   <app-page-header
-    [eyebrow]="'detail.eyebrow' | translate"
     [title]="currentTeam.name"
     [description]="'teams.members' | translate: { count: currentTeam.members.length }"
-  >
+    [hideActionsOnMobile]="true">
+    <!-- Ajustes (mobile ≤960px): abre a sessão com nome + membros. -->
+    <button
+      class="team__gear"
+      pageSettings
+      type="button"
+      [attr.aria-label]="'detail.settings' | translate"
+      [attr.aria-expanded]="settingsOpen()"
+      (click)="openSettings()">
+      <app-icon name="sliders" [size]="16" />
+    </button>
     <div pageActions>
-      <a appButton variant="outline" routerLink="/equipes">
-        <app-icon name="chevron" [rotate]="180" [size]="14" />
-        {{ 'nav.teams' | translate }}
-      </a>
       <button
         appButton
         variant="filled"
         type="button"
         [loading]="creatingProblem()"
-        (click)="createProblem()"
-      >
+        (click)="createProblem()">
         <app-icon name="plus" [size]="16" />
         {{ 'detail.newProblem' | translate }}
       </button>
     </div>
   </app-page-header>
-
   <div class="detail">
     <section class="detail__main" aria-labelledby="problems-title">
-      <div class="section-head">
+      <div class="section-head problems-head">
         <h2 id="problems-title" class="section-head__title">{{ 'detail.problems' | translate }}</h2>
+
+        @if (problems().length > 0) {
+          <div class="problems-tools">
+            <label class="problems-search">
+              <span class="sr-only">{{ 'detail.searchProblems' | translate }}</span>
+              <input
+                class="bs-input problems-search__input"
+                type="search"
+                [value]="problemQuery()"
+                (input)="setProblemQuery($any($event.target).value)"
+                [placeholder]="'detail.searchProblems' | translate" />
+            </label>
+
+            <div
+              class="problems-filters"
+              role="group"
+              [attr.aria-label]="'detail.problems' | translate">
+              <button
+                type="button"
+                class="problems-filter"
+                [class.problems-filter--active]="problemStatusFilter() === 'all'"
+                (click)="setProblemStatusFilter('all')">
+                {{ 'detail.filterAll' | translate }}
+              </button>
+              <button
+                type="button"
+                class="problems-filter"
+                [class.problems-filter--active]="problemStatusFilter() === 'Open'"
+                (click)="setProblemStatusFilter('Open')">
+                {{ 'status.open' | translate }}
+              </button>
+              <button
+                type="button"
+                class="problems-filter"
+                [class.problems-filter--active]="problemStatusFilter() === 'Selected'"
+                (click)="setProblemStatusFilter('Selected')">
+                {{ 'status.selected' | translate }}
+              </button>
+            </div>
+          </div>
+        }
       </div>
 
       @if (problemsLoading()) {
@@ -48,7 +96,13 @@
       } @else if (problemsError()) {
         <app-banner tone="error" [title]="'detail.problemsError' | translate">
           {{ problemsError()?.message }}
-          <button bannerAction appButton variant="outline" size="sm" type="button" (click)="reloadProblems()">
+          <button
+            bannerAction
+            appButton
+            variant="outline"
+            size="sm"
+            type="button"
+            (click)="reloadProblems()">
             {{ 'common.retry' | translate }}
           </button>
         </app-banner>
@@ -56,29 +110,45 @@
         <app-empty-state
           icon="flask"
           [title]="'detail.problemsEmpty.title' | translate"
-          [description]="'detail.problemsEmpty.desc' | translate"
-        >
+          [description]="'detail.problemsEmpty.desc' | translate">
           <button appButton variant="filled" type="button" (click)="createProblem()">
             {{ 'detail.createProblem' | translate }}
           </button>
         </app-empty-state>
+      } @else if (filteredProblems().length === 0) {
+        <app-empty-state
+          icon="info"
+          [title]="'detail.problemsFilterEmpty.title' | translate"
+          [description]="'detail.problemsFilterEmpty.desc' | translate">
+          <button appButton variant="outline" type="button" (click)="clearProblemFilters()">
+            {{ 'detail.clearFilters' | translate }}
+          </button>
+        </app-empty-state>
       } @else {
         <ul class="problems">
-          @for (problem of problems(); track problem.code) {
+          @for (problem of filteredProblems(); track problem.code) {
             <li>
               <a class="problem" [routerLink]="['/ideias', problem.code]">
                 <div class="problem__head">
                   <app-status-badge [status]="problem.status" />
-                  <app-validation-badge [validation]="problem.validation" />
-                  <span class="problem__arrow" aria-hidden="true">
-                    <app-icon name="arrow" [size]="16" />
-                  </span>
+                  @if (problem.validation !== 'NotTested') {
+                    <app-validation-badge [validation]="problem.validation" />
+                  }
                 </div>
                 <h3 class="problem__title">{{ problem.title }}</h3>
                 @if (problem.description) {
                   <p class="problem__description">{{ problem.description }}</p>
                 }
-                <span class="problem__date">{{ problem.creationDate | relativeDate }}</span>
+                <div class="problem__foot">
+                  <span class="problem__date">
+                    {{ memberName(problem.autorCode) }} ·
+                    {{ problem.creationDate | dateTime: 'date' }} ·
+                    {{ countsLabel(problem.code) }}
+                  </span>
+                  <span class="problem__arrow" aria-hidden="true">
+                    <app-icon name="arrow" [size]="16" />
+                  </span>
+                </div>
               </a>
             </li>
           }
@@ -86,136 +156,200 @@
       }
     </section>
 
-    <aside class="detail__side" aria-labelledby="members-title">
-      <app-card padding="md">
-        <div class="section-head section-head--compact">
-          <h2 id="members-title" class="section-head__title">{{ 'detail.members' | translate }}</h2>
-          <span class="section-head__count">{{ members().length }}</span>
-        </div>
+    @if (settingsOpen()) {
+      <button
+        class="detail__scrim"
+        type="button"
+        [attr.aria-label]="'panel.close' | translate"
+        (click)="closeSettings()"></button>
+    }
 
-        <form class="team-fields" (ngSubmit)="save()">
-          <app-field
-            controlId="team-name"
-            [label]="'detail.teamName' | translate"
-            required
-            [error]="
-              nameControl.touched && nameControl.invalid
-                ? ('detail.teamNameError' | translate)
-                : ''
-            "
-          >
-            <input
-              id="team-name"
-              class="bs-input"
-              type="text"
-              [formControl]="nameControl"
-              maxlength="80"
-            />
-          </app-field>
-        </form>
+    <aside
+      class="detail__side"
+      [class.detail__side--open]="settingsOpen()"
+      [class.detail__side--expanded]="settingsExpanded()"
+      [attr.aria-hidden]="!settingsOpen()"
+      aria-labelledby="members-title">
+      <!-- Cabeçalho da sessão (só no mobile; desktop usa a coluna). -->
+      <div class="detail__side-head">
+        <h2>{{ 'detail.settings' | translate }}</h2>
+        <button
+          appButton
+          variant="text"
+          size="sm"
+          class="detail__side-close"
+          type="button"
+          [attr.aria-label]="'panel.close' | translate"
+          (click)="closeSettings()">
+          <app-icon name="x" [size]="16" />
+        </button>
+      </div>
 
-        <ul class="members">
-          @for (member of members(); track member.userCode) {
-            <li class="member">
-              <span class="member__avatar">{{ initials(memberName(member.userCode)) }}</span>
-              <div class="member__copy">
-                <strong>{{ memberName(member.userCode) }}</strong>
-                <span>{{ memberEmail(member.userCode) }}</span>
-              </div>
-              <div class="member__role">
-                <app-role-badge [role]="roleName(member.role)" />
-                <select
-                  class="bs-select member__select"
-                  [value]="roleName(member.role)"
-                  [attr.aria-label]="'detail.memberRole' | translate: { name: memberName(member.userCode) }"
-                  (change)="changeRole(member.userCode, roleValue($any($event.target).value))"
-                >
-                  @for (name of roleNames; track name) {
-                    <option [value]="name" [selected]="name === roleName(member.role)">
-                      {{ roleLabel(name) }}
-                    </option>
+      <div class="detail__side-body" (scroll)="onSettingsScroll($event)">
+        <app-card padding="md">
+          <section class="team-name-block" aria-labelledby="team-name-title">
+            <form (ngSubmit)="save()">
+              <app-field
+                controlId="team-name"
+                [label]="'detail.teamName' | translate"
+                required
+                [error]="
+                  nameControl.touched && nameControl.invalid
+                    ? ('detail.teamNameError' | translate)
+                    : ''
+                ">
+                <input
+                  id="team-name"
+                  class="bs-input"
+                  type="text"
+                  [formControl]="nameControl"
+                  maxlength="80" />
+              </app-field>
+            </form>
+          </section>
+
+          <div class="section-head section-head--compact">
+            <div class="section-head__title-row">
+              <h2 id="members-title" class="section-head__title">
+                {{ 'detail.members' | translate }} ({{ members().length }})
+              </h2>
+              <button
+                type="button"
+                class="section-head__info"
+                [appTooltip]="'detail.rolesHint' | translate"
+                [attr.aria-label]="'detail.rolesHint' | translate">
+                <app-icon name="info" [size]="14" />
+              </button>
+            </div>
+          </div>
+
+          <ul class="members" role="list">
+            @for (member of members(); track member.userCode) {
+              <li class="member">
+                <span class="member__avatar" aria-hidden="true">{{
+                  memberInitials(member.userCode)
+                }}</span>
+                <div class="member__copy">
+                  <strong>{{ memberName(member.userCode) }}</strong>
+                  <span>{{ memberEmail(member.userCode) }}</span>
+                </div>
+                <div class="member__actions">
+                  <select
+                    class="bs-select member__select"
+                    [value]="roleName(member.role)"
+                    [attr.aria-label]="
+                      'detail.memberRole' | translate: { name: memberName(member.userCode) }
+                    "
+                    (change)="changeRole(member.userCode, roleValue($any($event.target).value))">
+                    @for (name of roleNames; track name) {
+                      <option [value]="name" [selected]="name === roleName(member.role)">
+                        {{ roleLabel(name) }}
+                      </option>
+                    }
+                  </select>
+                  @if (!isOwner(member.role)) {
+                    <button
+                      appButton
+                      variant="text"
+                      size="sm"
+                      type="button"
+                      class="member__remove"
+                      [attr.aria-label]="
+                        'detail.removeMember' | translate: { name: memberName(member.userCode) }
+                      "
+                      (click)="removeMember(member.userCode)">
+                      <app-icon name="x" [size]="16" />
+                    </button>
                   }
-                </select>
+                </div>
+              </li>
+            }
+          </ul>
+
+          @if (availableUsers().length > 0) {
+            <div class="add-member">
+              <div class="add-member__grid">
+                <app-field controlId="member-user" [label]="'detail.addPerson' | translate">
+                  <select
+                    id="member-user"
+                    class="bs-select"
+                    [value]="selectedUserCode() ?? ''"
+                    (change)="onUserSelected($any($event.target).value)">
+                    <option value="">{{ 'detail.select' | translate }}</option>
+                    @for (user of availableUsers(); track user.code) {
+                      <option [value]="user.code">{{ user.name }}</option>
+                    }
+                  </select>
+                </app-field>
+
+                <app-field controlId="member-role" [label]="'detail.role' | translate">
+                  <select
+                    id="member-role"
+                    class="bs-select"
+                    [value]="roleName(selectedRole())"
+                    (change)="onRoleSelected($any($event.target).value)">
+                    @for (name of roleNames; track name) {
+                      <option [value]="name" [selected]="name === roleName(selectedRole())">
+                        {{ roleLabel(name) }}
+                      </option>
+                    }
+                  </select>
+                </app-field>
               </div>
+
+              <p class="add-member__role-desc">
+                {{ roleDescription(roleName(selectedRole())) }}
+              </p>
+
               <button
                 appButton
-                variant="text"
-                size="sm"
+                variant="outline"
                 type="button"
-                class="member__remove"
-                [attr.aria-label]="'detail.removeMember' | translate: { name: memberName(member.userCode) }"
-                (click)="removeMember(member.userCode)"
-              >
-                <app-icon name="x" [size]="16" />
+                class="add-member__submit"
+                [disabled]="!selectedUserCode()"
+                (click)="addMember()">
+                <app-icon name="plus" [size]="16" />
+                {{ 'detail.add' | translate }}
               </button>
-            </li>
+            </div>
           }
-        </ul>
 
-        @if (availableUsers().length > 0) {
-          <div class="add-member">
-            <app-field controlId="member-user" [label]="'detail.addPerson' | translate">
-              <select
-                id="member-user"
-                class="bs-select"
-                [value]="selectedUserCode() ?? ''"
-                (change)="onUserSelected($any($event.target).value)"
-              >
-                <option value="">{{ 'detail.select' | translate }}</option>
-                @for (user of availableUsers(); track user.code) {
-                  <option [value]="user.code">{{ user.name }}</option>
-                }
-              </select>
-            </app-field>
-
-            <app-field controlId="member-role" [label]="'detail.role' | translate">
-              <select
-                id="member-role"
-                class="bs-select"
-                [value]="roleName(selectedRole())"
-                (change)="onRoleSelected($any($event.target).value)"
-              >
-                @for (name of roleNames; track name) {
-                  <option [value]="name" [selected]="name === roleName(selectedRole())">
-                    {{ roleLabel(name) }}
-                  </option>
-                }
-              </select>
-            </app-field>
-
+          <div class="team-save">
             <button
               appButton
-              variant="outline"
+              variant="filled"
               type="button"
-              [disabled]="!selectedUserCode()"
-              (click)="addMember()"
-            >
-              <app-icon name="plus" [size]="16" />
-              {{ 'detail.add' | translate }}
+              [disabled]="!dirty()"
+              [loading]="saving()"
+              (click)="save()">
+              {{ 'detail.save' | translate }}
             </button>
-
-            <p class="role-hint">{{ roleDescription(roleName(selectedRole())) }}</p>
+            @if (dirty()) {
+              <button appButton variant="text" type="button" (click)="reset()">
+                {{ 'detail.undo' | translate }}
+              </button>
+            }
           </div>
-        }
-
-        <div class="team-save">
-          <button
-            appButton
-            variant="filled"
-            type="button"
-            [disabled]="!dirty()"
-            [loading]="saving()"
-            (click)="save()"
-          >
-            {{ 'detail.save' | translate }}
-          </button>
-          @if (dirty()) {
-            <button appButton variant="text" type="button" (click)="reset()">
-              {{ 'detail.undo' | translate }}
-            </button>
-          }
-        </div>
-      </app-card>
+        </app-card>
+      </div>
     </aside>
+  </div>
+
+  <!-- Barra inferior fixa (mobile ≤640px): as ações do cabeçalho moram aqui
+       no padrão da barra do canvas. Desktop usa o cabeçalho. -->
+  <div class="detail__bar">
+    <a appButton variant="outline" routerLink="/equipes">
+      <app-icon name="chevron" [rotate]="180" [size]="14" />
+      {{ 'nav.teams' | translate }}
+    </a>
+    <button
+      appButton
+      variant="filled"
+      type="button"
+      [loading]="creatingProblem()"
+      (click)="createProblem()">
+      <app-icon name="plus" [size]="16" />
+      {{ 'detail.newProblem' | translate }}
+    </button>
   </div>
 }

@@ -65,7 +65,15 @@ export class I18nService {
 
 /** Tradução pura (testável/isolada): idioma → dicionário → PT → chave. */
 export function translate(key: string, lang: LangCode, params?: LangParams): string {
-  const template = DICTS[lang][key] ?? DICTS.pt[key] ?? key;
+  // Plural real: quando há `count`, prefere `{key}_one` / `{key}_other`.
+  let template: string | undefined;
+
+  if (params && typeof params['count'] === 'number') {
+    const pluralKey = params['count'] === 1 ? `${key}_one` : `${key}_other`;
+    template = DICTS[lang][pluralKey] ?? DICTS.pt[pluralKey];
+  }
+
+  template ??= DICTS[lang][key] ?? DICTS.pt[key] ?? key;
 
   if (!params) {
     return template;

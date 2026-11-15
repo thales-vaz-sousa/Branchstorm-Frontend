@@ -1,5 +1,6 @@
 import { type Routes } from '@angular/router';
 import { sessionGuard } from '@core/auth/session.guard';
+import { environment } from '@env/environment';
 
 export const routes: Routes = [
   {
@@ -47,12 +48,19 @@ export const routes: Routes = [
             (module) => module.IdeaWorkspacePage,
           ),
       },
-      {
-        path: 'ui',
-        data: { titleKey: 'ui.title' },
-        loadComponent: () =>
-          import('@features/ui-showcase/ui-showcase.page').then((module) => module.UiShowcasePage),
-      },
+      // Kit de componentes: só no ambiente de desenvolvimento.
+      ...(environment.production
+        ? []
+        : [
+            {
+              path: 'ui',
+              data: { titleKey: 'ui.title' },
+              loadComponent: () =>
+                import('@features/ui-showcase/ui-showcase.page').then(
+                  (module) => module.UiShowcasePage,
+                ),
+            },
+          ]),
       {
         path: 'painel',
         pathMatch: 'full',

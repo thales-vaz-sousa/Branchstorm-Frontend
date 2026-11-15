@@ -1,143 +1,206 @@
-<div class="banner">
-  <img
-    src="brand/wide.png"
-    [alt]="'about.bannerAlt' | translate"
-    width="1969"
-    height="414" />
-</div>
-
-<div class="trunk">
-  <section class="ramo ramo--wide">
-    <p class="ramo__tag">Branchstorm <span class="pill pill--outline">{{ 'about.badge' | translate }}</span></p>
-    <h1>{{ 'about.h1' | translate }}</h1>
-    <p class="ramo__lead">
-      {{ 'about.lead' | translate }}
-    </p>
+<div class="about">
+  <!-- 1. Hero -->
+  <section class="hero" aria-labelledby="about-hero-title">
+    <div class="hero__copy">
+      <p class="hero__eyebrow">{{ 'about.eyebrow' | translate }}</p>
+      <h1 id="about-hero-title">{{ 'about.heroTitle' | translate }}</h1>
+      <p class="hero__lead" [innerHTML]="'about.heroLead' | translate"></p>
+      <p class="hero__text">{{ 'about.heroText' | translate }}</p>
+    </div>
+    <div class="hero__visual" aria-hidden="true">
+      <img src="brand/icon-color.png" alt="" width="220" height="220" />
+    </div>
   </section>
 
-  <section class="ramo ramo--left">
-    <p class="ramo__tag">{{ 'about.s1.tag' | translate }}</p>
-    <h2>{{ 'about.s1.h2' | translate }}</h2>
-    <p>
-      {{ 'about.s1.p' | translate }}
-    </p>
-  </section>
+  <!-- 2. Como funciona -->
+  <section class="section" aria-labelledby="how-title">
+    <header class="section__head">
+      <h2 id="how-title">{{ 'about.how.title' | translate }}</h2>
+      <p>{{ 'about.how.intro' | translate }}</p>
+    </header>
 
-  <section class="ramo ramo--right">
-    <p class="ramo__tag">{{ 'about.s2.tag' | translate }}</p>
-    <h2>{{ 'about.s2.h2' | translate }}</h2>
-    <ul class="arv">
+    <ul class="how-list">
       <li>
-        {{ 'about.s2.root' | translate }}
-        <ul>
-          <li>
-            {{ 'about.s2.a' | translate }}
-            <app-status-badge status="Selected" />
-            <ul>
-              <li>
-                {{ 'about.s2.a1' | translate }}
-                <app-status-badge status="Open" />
-              </li>
-            </ul>
-          </li>
-          <li class="arv__x">
-            {{ 'about.s2.b' | translate }}
-            <app-status-badge status="Discarded" />
-          </li>
-          <li class="arv__x">
-            {{ 'about.s2.c' | translate }}
-            <app-status-badge status="Discarded" />
-          </li>
-        </ul>
+        <strong>{{ 'about.how.step1.title' | translate }}</strong>
+        {{ 'about.how.step1.desc' | translate }}
+      </li>
+      <li>
+        <strong>{{ 'about.how.step2.title' | translate }}</strong>
+        {{ 'about.how.step2.desc' | translate }}
+      </li>
+      <li>
+        <strong>{{ 'about.how.step3.title' | translate }}</strong>
+        {{ 'about.how.step3.desc' | translate }}
+      </li>
+      <li>
+        <strong>{{ 'about.how.step4.title' | translate }}</strong>
+        {{ 'about.how.step4.desc' | translate }}
+      </li>
+      <li>
+        <strong>{{ 'about.how.step5.title' | translate }}</strong>
+        {{ 'about.how.step5.desc' | translate }}
       </li>
     </ul>
-    <p class="ramo__note">{{ 'about.s2.note' | translate }}</p>
-    <ul class="arv">
-      <li>{{ 'about.s2.autor' | translate }}</li>
-      <li>{{ 'about.s2.colab' | translate }}</li>
-      <li>{{ 'about.s2.eval' | translate }}</li>
-    </ul>
+
+    <p class="section__note">{{ 'about.how.note' | translate }}</p>
+
+    <figure class="tree-demo" aria-labelledby="tree-demo-caption">
+      <div class="tree-demo__canvas">
+        <svg
+          class="tree-demo__svg"
+          viewBox="0 0 780 360"
+          role="img"
+          [attr.aria-label]="'about.how.tree.aria' | translate">
+          <path d="M150 180 H220 V70 H300" class="tree-demo__line" />
+          <path d="M150 180 H220 V180 H300" class="tree-demo__line" />
+          <path d="M150 180 H220 V290 H300" class="tree-demo__line tree-demo__line--muted" />
+          <path d="M430 70 H495 V50 H560" class="tree-demo__line" />
+          <path d="M430 70 H495 V150 H560" class="tree-demo__line tree-demo__line--muted" />
+          <path d="M430 180 H495 V270 H560" class="tree-demo__line tree-demo__line--muted" />
+
+          <g transform="translate(20,140)">
+            <rect width="130" height="80" rx="12" class="node node--problem" />
+            <text x="65" y="36" text-anchor="middle" class="node__label">
+              {{ 'about.how.tree.problem' | translate }}
+            </text>
+            <text x="65" y="56" text-anchor="middle" class="node__sub">
+              {{ 'about.how.tree.problemSub' | translate }}
+            </text>
+          </g>
+          <g transform="translate(300,30)">
+            <rect width="130" height="80" rx="12" class="node node--selected" />
+            <text x="65" y="36" text-anchor="middle" class="node__label">
+              {{ 'about.how.tree.solA' | translate }}
+            </text>
+            <text x="65" y="56" text-anchor="middle" class="node__sub node__sub--accent">
+              {{ 'about.how.tree.solASub' | translate }}
+            </text>
+          </g>
+          <g transform="translate(300,140)">
+            <rect width="130" height="80" rx="12" class="node" />
+            <text x="65" y="36" text-anchor="middle" class="node__label">
+              {{ 'about.how.tree.solB' | translate }}
+            </text>
+            <text x="65" y="56" text-anchor="middle" class="node__sub">
+              {{ 'about.how.tree.solBSub' | translate }}
+            </text>
+          </g>
+          <g transform="translate(300,250)">
+            <rect width="130" height="80" rx="12" class="node node--muted" />
+            <text x="65" y="36" text-anchor="middle" class="node__label">
+              {{ 'about.how.tree.solC' | translate }}
+            </text>
+            <text x="65" y="56" text-anchor="middle" class="node__sub">
+              {{ 'about.how.tree.solCSub' | translate }}
+            </text>
+          </g>
+          <g transform="translate(560,10)">
+            <rect width="160" height="80" rx="12" class="node node--final" />
+            <text x="80" y="36" text-anchor="middle" class="node__label">
+              {{ 'about.how.tree.final' | translate }}
+            </text>
+            <text x="80" y="56" text-anchor="middle" class="node__sub node__sub--on">
+              {{ 'about.how.tree.finalSub' | translate }}
+            </text>
+          </g>
+          <g transform="translate(560,110)">
+            <rect width="160" height="80" rx="12" class="node node--muted" />
+            <text x="80" y="36" text-anchor="middle" class="node__label">
+              {{ 'about.how.tree.prev' | translate }}
+            </text>
+            <text x="80" y="56" text-anchor="middle" class="node__sub">
+              {{ 'about.how.tree.prevSub' | translate }}
+            </text>
+          </g>
+          <g transform="translate(560,230)">
+            <rect width="160" height="80" rx="12" class="node node--muted" />
+            <text x="80" y="36" text-anchor="middle" class="node__label">
+              {{ 'about.how.tree.other' | translate }}
+            </text>
+            <text x="80" y="56" text-anchor="middle" class="node__sub">
+              {{ 'about.how.tree.otherSub' | translate }}
+            </text>
+          </g>
+        </svg>
+      </div>
+      <figcaption id="tree-demo-caption">{{ 'about.how.tree.caption' | translate }}</figcaption>
+    </figure>
   </section>
 
-  <section class="ramo ramo--left">
-    <p class="ramo__tag">{{ 'about.s3.tag' | translate }}</p>
-    <h2>{{ 'about.s3.h2' | translate }}</h2>
-    <ul class="st">
-      <li><span class="pill">{{ 'about.s3.done' | translate }}</span>{{ 'about.s3.f1' | translate }}</li>
-      <li><span class="pill">{{ 'about.s3.done' | translate }}</span>{{ 'about.s3.f2' | translate }}</li>
-      <li><span class="pill">{{ 'about.s3.done' | translate }}</span>{{ 'about.s3.f3' | translate }}</li>
-      <li><span class="pill">{{ 'about.s3.done' | translate }}</span>{{ 'about.s3.f4' | translate }}</li>
-      <li><span class="pill">{{ 'about.s3.done' | translate }}</span>{{ 'about.s3.f5' | translate }}</li>
-      <li><span class="pill pill--outline">{{ 'about.s3.progress' | translate }}</span>{{ 'about.s3.f6' | translate }}</li>
-      <li><span class="pill pill--outline">{{ 'about.s3.progress' | translate }}</span>{{ 'about.s3.f7' | translate }}</li>
-    </ul>
-  </section>
+  <!-- 3. Diferenciais -->
+  <section class="section" aria-labelledby="diff-title">
+    <header class="section__head">
+      <h2 id="diff-title">{{ 'about.diff.title' | translate }}</h2>
+    </header>
 
-  <section class="ramo ramo--wide">
-    <p class="ramo__tag">{{ 'about.s4.tag' | translate }}</p>
-    <h2>{{ 'about.s4.h2' | translate }}</h2>
-    <p>
-      {{ 'about.s4.p' | translate }}
-    </p>
-    <ul class="arv">
-      <li>{{ 'about.s4.u' | translate }}</li>
-      <li>{{ 'about.s4.t' | translate }}</li>
-      <li>{{ 'about.s4.i' | translate }}</li>
-      <li>{{ 'about.s4.h' | translate }}</li>
-      <li>{{ 'about.s4.f' | translate }}</li>
-    </ul>
-    <p class="ramo__note">{{ 'about.s4.note' | translate }}</p>
-  </section>
+    <div class="cards">
+      <article class="card">
+        <div class="card__head">
+          <div class="card__icon" aria-hidden="true"><app-icon name="tree" [size]="22" /></div>
+          <h3>{{ 'about.diff.branching.title' | translate }}</h3>
+        </div>
+        <p>{{ 'about.diff.branching.desc' | translate }}</p>
+      </article>
 
-  <section class="ramo ramo--right">
-    <p class="ramo__tag">{{ 'about.s5.tag' | translate }}</p>
-    <h2>{{ 'about.s5.h2' | translate }}</h2>
-    <ul class="st">
-      <li><span class="pill">{{ 'about.s5.back' | translate }}</span>{{ 'about.s5.backDesc' | translate }}</li>
-      <li><span class="pill">{{ 'about.s5.front' | translate }}</span>{{ 'about.s5.frontDesc' | translate }}</li>
-      <li><span class="pill">{{ 'about.s5.infra' | translate }}</span>{{ 'about.s5.infraDesc' | translate }}</li>
-    </ul>
-  </section>
+      <article class="card">
+        <div class="card__head">
+          <div class="card__icon" aria-hidden="true"><app-icon name="history" [size]="22" /></div>
+          <h3>{{ 'about.diff.history.title' | translate }}</h3>
+        </div>
+        <p>{{ 'about.diff.history.desc' | translate }}</p>
+      </article>
 
-  <section class="ramo ramo--wide">
-    <p class="ramo__tag">{{ 'about.s6.tag' | translate }}</p>
-    <h2>{{ 'about.s6.h2' | translate }}</h2>
-    <div class="metro">
-      <svg
-        viewBox="0 0 900 190"
-        role="img"
-        [attr.aria-label]="'about.s6.h2' | translate">
-        <path class="ln" d="M50 90H560" />
-        <path class="lb" d="M560 90C600 90 610 40 650 40H700" />
-        <path class="lb" d="M560 90H700" />
-        <path class="lb" d="M560 90C600 90 610 140 650 140H700" />
-        <circle class="sd" cx="50" cy="90" r="11" />
-        <circle class="sr" cx="190" cy="90" r="11" />
-        <circle class="si" cx="190" cy="90" r="4.5" />
-        <circle class="sr" cx="330" cy="90" r="11" />
-        <circle class="sr" cx="450" cy="90" r="11" />
-        <circle class="sd" cx="560" cy="90" r="15" />
-        <text x="50" y="48" text-anchor="middle">{{ 'about.s6.readme' | translate }}</text>
-        <text x="190" y="122" text-anchor="middle">{{ 'about.s6.services' | translate }}</text>
-        <text x="330" y="48" text-anchor="middle">{{ 'about.s6.gateway' | translate }}</text>
-        <text x="450" y="122" text-anchor="middle">{{ 'about.s6.deploy' | translate }}</text>
-        <text x="560" y="130" text-anchor="middle">{{ 'about.s6.delivery' | translate }}</text>
-        <text x="712" y="44" dominant-baseline="middle" class="m">{{ 'about.road.ia' | translate }}</text>
-        <text x="712" y="94" dominant-baseline="middle" class="m">{{ 'about.road.perspectives' | translate }}</text>
-        <text x="712" y="144" dominant-baseline="middle" class="m">{{ 'about.road.battle' | translate }}</text>
-      </svg>
+      <article class="card">
+        <div class="card__head">
+          <div class="card__icon" aria-hidden="true"><app-icon name="flask" [size]="22" /></div>
+          <h3>{{ 'about.diff.validation.title' | translate }}</h3>
+        </div>
+        <p>{{ 'about.diff.validation.desc' | translate }}</p>
+      </article>
+
+      <article class="card">
+        <div class="card__head">
+          <div class="card__icon" aria-hidden="true"><app-icon name="message" [size]="22" /></div>
+          <h3>{{ 'about.diff.collab.title' | translate }}</h3>
+        </div>
+        <p>{{ 'about.diff.collab.desc' | translate }}</p>
+      </article>
     </div>
-    <p class="leg">
-      {{ 'about.s6.legend' | translate }}
-    </p>
   </section>
 
-  <section class="ramo ramo--right">
-    <p class="ramo__tag">{{ 'about.s7.tag' | translate }}</p>
-    <h2>{{ 'about.s7.h2' | translate }}</h2>
-    <p class="ramo__lead">{{ 'about.s7.names' | translate }}</p>
-    <p>
-      {{ 'about.s7.course' | translate }}
-    </p>
+  <!-- Onde utilizar -->
+  <section class="section" aria-labelledby="use-title">
+    <header class="section__head">
+      <h2 id="use-title">{{ 'about.use.title' | translate }}</h2>
+      <p>{{ 'about.use.intro' | translate }}</p>
+    </header>
+
+    <ul class="use-list">
+      <li>{{ 'about.use.1' | translate }}</li>
+      <li>{{ 'about.use.2' | translate }}</li>
+      <li>{{ 'about.use.3' | translate }}</li>
+      <li>{{ 'about.use.4' | translate }}</li>
+      <li>{{ 'about.use.5' | translate }}</li>
+    </ul>
+  </section>
+
+  <!-- 4. Origem -->
+  <section class="section section--origin" aria-labelledby="origin-title">
+    <header class="section__head">
+      <h2 id="origin-title">{{ 'about.origin.title' | translate }}</h2>
+    </header>
+
+    <p>{{ 'about.origin.text' | translate }}</p>
+
+    <dl class="origin-list">
+      <div>
+        <dt>{{ 'about.origin.advisor' | translate }}</dt>
+        <dd>{{ 'about.origin.advisorName' | translate }}</dd>
+      </div>
+      <div>
+        <dt>{{ 'about.origin.team' | translate }}</dt>
+        <dd>{{ 'about.origin.teamNames' | translate }}</dd>
+      </div>
+    </dl>
   </section>
 </div>

@@ -69,7 +69,12 @@ export class IdeaWorkspacePage {
 
   protected readonly code = signal<string>('');
   protected readonly drawerOpen = signal(false);
-  protected readonly layoutMode = signal<TreeLayoutMode>('landscape');
+  /** Sessão do nó expandida: rolar para baixo dentro dela ocupa a tela toda. */
+  protected readonly panelExpanded = signal(false);
+  // Telas finas abrem em Retrato (a árvore desce, sem rolagem lateral).
+  protected readonly layoutMode = signal<TreeLayoutMode>(
+    typeof window !== 'undefined' && window.innerWidth <= 640 ? 'portrait' : 'landscape',
+  );
 
   protected readonly authors = computed(() => {
     const map = new Map<string, string>();
@@ -146,6 +151,7 @@ export class IdeaWorkspacePage {
         if (this.tree.selectedCode()) {
           this.tree.selectNode(null);
           this.drawerOpen.set(false);
+          this.panelExpanded.set(false);
         }
         return;
       }
@@ -153,6 +159,7 @@ export class IdeaWorkspacePage {
       if (nodes.some((node) => node.code === requested)) {
         this.tree.selectNode(requested);
         this.drawerOpen.set(true);
+        this.panelExpanded.set(false);
       }
     });
   }
@@ -191,6 +198,7 @@ export class IdeaWorkspacePage {
   protected selectNode(code: string): void {
     this.tree.selectNode(code);
     this.drawerOpen.set(true);
+    this.panelExpanded.set(false);
 
     if (this.route.snapshot.queryParamMap.get('no') !== code) {
       void this.router.navigate([], {
@@ -205,6 +213,7 @@ export class IdeaWorkspacePage {
   protected closePanel(): void {
     this.tree.selectNode(null);
     this.drawerOpen.set(false);
+    this.panelExpanded.set(false);
 
     if (this.route.snapshot.queryParamMap.has('no')) {
       void this.router.navigate([], {
