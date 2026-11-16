@@ -16,19 +16,58 @@ export class NotificationService {
   readonly toasts = this._toasts.asReadonly();
 
   success(message: string): void {
-    this.push(message, 'success', 3500);
+    this.notify(message, 'success', 3500);
   }
 
   info(message: string): void {
-    this.push(message, 'info', 4500);
+    this.notify(message, 'info', 4500);
   }
 
   error(message: string): void {
-    this.push(message, 'error', 7000);
+    this.notify(message, 'error', 7000);
   }
 
   dismiss(id: number): void {
     this._toasts.update((toasts) => toasts.filter((toast) => toast.id !== id));
+  }
+
+  private notify(message: string, tone: ToastTone, duration: number): void {
+    void this.showBrowserNotification(message)
+      .then((shown) => {
+        if (!shown) {
+          this.push(message, tone, duration);
+        }
+      })
+      .catch(() => this.push(message, tone, duration));
+  }
+
+  private async showBrowserNotification(message: string): Promise<boolean> {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      return false;
+    }
+
+    try {
+      let permission = Notification.permission;
+
+      if (permission === 'default') {
+        permission = await Notification.requestPermission();
+      }
+
+      if (permission !== 'granted') {
+        return false;
+      }
+
+      const notification = new Notification('Branchstorm', {
+        body: message,
+        icon: 'brand/icon-color.png',
+        silent: true,
+      });
+
+      setTimeout(() => notification.close(), 4500);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private push(message: string, tone: ToastTone, duration: number): void {
